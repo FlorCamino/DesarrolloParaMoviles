@@ -3,16 +3,22 @@ import { createContext, ReactNode, useEffect, useState } from 'react';
 import { login as loginService, registrar as registrarService, } from '@/services/auth';
 import { eliminarSesion, guardarSesion, obtenerSesion, } from '@/services/session-storage';
 
+import { autenticarConBiometria, biometriaDisponible } from '@/services/biometric';
+
 import type { LoginCredentials, RegistroData, Sesion, } from '@/types/auth';
 
 import type { Usuario } from '@/types/usuario';
 
 interface AuthContextData {
   sesion: Sesion | null;
+  sesionPendiente: Sesion | null;
+
   usuario: Usuario | null;
   
   loading: boolean;
   initializing: boolean;
+
+  puedeUsarBiometria: boolean;
 
   login: (
     credentials: LoginCredentials
@@ -23,6 +29,11 @@ interface AuthContextData {
   ) => Promise<Usuario>;
 
   logout: () => Promise<void>;
+
+  reingresarConBiometria: 
+  () => Promise<boolean>;
+
+  usarLoginManual: () => void;
 }
 
 export const AuthContext =
@@ -38,6 +49,12 @@ export function AuthProvider({
   const [sesion, setSesion] =
     useState<Sesion | null>(null);
   
+  const [sesionPendiente, setSesionPendiente] =
+  useState<Sesion | null>(null);
+
+  const [puedeUsarBiometria, setPuedeUsarBiometria] =
+    useState(false);
+  
   const [loading, setLoading] =
     useState(false);
 
@@ -50,7 +67,11 @@ export function AuthProvider({
         const sesionGuardada = await obtenerSesion();
 
         if (sesionGuardada) {
-          setSesion(sesionGuardada);
+          const disponible =
+            await biometriaDisponible();
+
+          setPuedeUsarBiometria(disponible);
+          setSesionPendiente(sesionGuardada);
         }
       } catch (error) {
         console.error(
@@ -97,18 +118,47 @@ export function AuthProvider({
   const logout = async () => {
     await eliminarSesion();
     setSesion(null);
+    setSesionPendiente(null);
+  };
+
+  const reingresarConBiometria =
+  async (): Promise<boolean> => {
+    if (!sesionPendiente) {
+      return false;
+    }
+
+    const autenticado =
+      await autenticarConBiometria();
+
+    if (!autenticado) {
+      return false;
+    }
+
+    setSesion(sesionPendiente);
+    setSesionPendiente(null);
+
+    return true;
+  };
+
+  const usarLoginManual = () => {
+    setSesionPendiente(null);
+    setSesion(null);
   };
 
   return (
     <AuthContext.Provider
       value={{
         sesion,
+        sesionPendiente,
         usuario: sesion?.usuario ?? null,
         loading,
         initializing,
+        puedeUsarBiometria,
         login,
         registrar,
         logout,
+        reingresarConBiometria,
+        usarLoginManual,
       }}
     >
       {children}
