@@ -1,3 +1,4 @@
+import { AuthProvider } from '@/contexts/auth-context';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
@@ -13,12 +14,14 @@ export default function RootLayout() {
     <ThemeProvider
       value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
     >
-      <AnimatedSplashOverlay />
+      <AuthProvider>
+        <AnimatedSplashOverlay />
 
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(auth)" />
-      </Stack>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(auth)" />
+        </Stack>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

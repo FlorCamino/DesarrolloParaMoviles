@@ -3,13 +3,12 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, } from
 
 import { router } from 'expo-router';
 
-import { login } from '@/services/auth';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  const [loading, setLoading] = useState(false);
+  const { login, loading, } = useAuth();
   const [error, setError] = useState('');
 
   const emailValido = (email: string) => {
@@ -30,14 +29,10 @@ export default function LoginScreen() {
     }
 
     try {
-      setLoading(true);
-
-      const sesion = await login({
+      await login({
         email,
         password,
       });
-
-      console.log('Login correcto:', sesion);
 
       router.replace('/');
     } catch (error) {
@@ -46,9 +41,7 @@ export default function LoginScreen() {
       } else {
         setError('Ocurrió un error al iniciar sesión.');
       }
-    } finally {
-      setLoading(false);
-    }
+    } 
   };
 
   return (

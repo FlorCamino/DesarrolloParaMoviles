@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, } from
 
 import { router } from 'expo-router';
 
-import { registrar } from '@/services/auth';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function RegistroScreen() {
   const [nombre, setNombre] = useState('');
@@ -11,7 +11,7 @@ export default function RegistroScreen() {
   const [password, setPassword] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
 
-  const [loading, setLoading] = useState(false);
+  const { registrar, loading,} = useAuth();
   const [error, setError] = useState('');
 
   const emailValido = (email: string) => {
@@ -47,8 +47,6 @@ export default function RegistroScreen() {
     }
 
     try {
-      setLoading(true);
-
       const usuario = await registrar({
         nombre,
         email,
@@ -64,9 +62,7 @@ export default function RegistroScreen() {
       } else {
         setError('Ocurrió un error al crear la cuenta.');
       }
-    } finally {
-      setLoading(false);
-    }
+    } 
   };
 
   return (

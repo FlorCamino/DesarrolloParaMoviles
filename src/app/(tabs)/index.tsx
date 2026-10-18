@@ -1,3 +1,4 @@
+import { useAuth } from '@/hooks/use-auth';
 import * as Device from 'expo-device';
 import { router } from 'expo-router';
 import { Platform, Pressable, StyleSheet, } from 'react-native';
@@ -29,6 +30,7 @@ function getDevMenuHint() {
 }
 
 export default function HomeScreen() {
+  const { usuario, logout,} = useAuth();
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -39,25 +41,57 @@ export default function HomeScreen() {
           </ThemedText>
         </ThemedView>
 
-        <Pressable
-          onPress={() => router.push('/login')}
-          style={{
-            backgroundColor: '#1769e0',
-            padding: 14,
-            borderRadius: 10,
-            marginTop: 20,
-          }}
-        >
-          <ThemedText
+        {usuario ? (
+          <>
+            <ThemedText>
+              Hola, {usuario.nombre}
+            </ThemedText>
+
+            <ThemedText>
+              Rol: {usuario.rol}
+            </ThemedText>
+
+            <Pressable
+              onPress={logout}
+              style={{
+                backgroundColor: '#b00020',
+                padding: 14,
+                borderRadius: 10,
+                marginTop: 20,
+              }}
+            >
+              <ThemedText
+                style={{
+                  color: '#ffffff',
+                  textAlign: 'center',
+                  fontWeight: '700',
+                }}
+              >
+                Cerrar sesión
+              </ThemedText>
+            </Pressable>
+          </>
+        ) : (
+          <Pressable
+            onPress={() => router.push('/login')}
             style={{
-              color: '#ffffff',
-              textAlign: 'center',
-              fontWeight: '700',
+              backgroundColor: '#1769e0',
+              padding: 14,
+              borderRadius: 10,
+              marginTop: 20,
             }}
           >
-            Iniciar sesión
-          </ThemedText>
-        </Pressable>
+            <ThemedText
+              style={{
+                color: '#ffffff',
+                textAlign: 'center',
+                fontWeight: '700',
+              }}
+            >
+              Iniciar sesión
+            </ThemedText>
+          </Pressable>
+        )}
 
         {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>
