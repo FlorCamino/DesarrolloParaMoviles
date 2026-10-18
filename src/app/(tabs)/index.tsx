@@ -1,9 +1,9 @@
 import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import { Platform, Pressable, StyleSheet, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
@@ -39,21 +39,25 @@ export default function HomeScreen() {
           </ThemedText>
         </ThemedView>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/(tabs)/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+        <Pressable
+          onPress={() => router.push('/login')}
+          style={{
+            backgroundColor: '#1769e0',
+            padding: 14,
+            borderRadius: 10,
+            marginTop: 20,
+          }}
+        >
+          <ThemedText
+            style={{
+              color: '#ffffff',
+              textAlign: 'center',
+              fontWeight: '700',
+            }}
+          >
+            Iniciar sesión
+          </ThemedText>
+        </Pressable>
 
         {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>
