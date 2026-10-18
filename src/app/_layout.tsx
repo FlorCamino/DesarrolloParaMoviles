@@ -1,9 +1,9 @@
 import { BiometricReentry } from '@/components/biometric-reentry';
 import { AuthProvider } from '@/contexts/auth-context';
 import { useAuth } from '@/hooks/use-auth';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 
@@ -34,12 +34,13 @@ function AppNavigator() {
 }
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+
 
   return (
     <ThemeProvider
-      value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
+      value={DefaultTheme}
     >
+      <StatusBar style="dark" />
       <AuthProvider>
         <AppNavigator />
       </AuthProvider>
