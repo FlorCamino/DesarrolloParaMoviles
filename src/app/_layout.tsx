@@ -1,3 +1,4 @@
+import { BiometricReentry } from '@/components/biometric-reentry';
 import { AuthProvider } from '@/contexts/auth-context';
 import { useAuth } from '@/hooks/use-auth';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
@@ -9,23 +10,28 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 SplashScreen.preventAutoHideAsync();
 
 function AppNavigator() {
-    const { initializing } = useAuth();
+  const {
+    initializing,
+    sesionPendiente,
+  } = useAuth();
 
-    if (initializing) {
-      return null;
-    }
+  return (
+    <>
+      <AnimatedSplashOverlay />
 
-    return (
-      <>
-        <AnimatedSplashOverlay />
-
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(auth)" />
-        </Stack>
-      </>
-    );
-  }
+      {!initializing && (
+        sesionPendiente ? (
+          <BiometricReentry />
+        ) : (
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(auth)" />
+          </Stack>
+        )
+      )}
+    </>
+  );
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
