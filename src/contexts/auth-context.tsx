@@ -67,11 +67,16 @@ export function AuthProvider({
         const sesionGuardada = await obtenerSesion();
 
         if (sesionGuardada) {
-          const disponible =
-            await biometriaDisponible();
-
-          setPuedeUsarBiometria(disponible);
           setSesionPendiente(sesionGuardada);
+
+          try {
+            const disponible =
+              await biometriaDisponible();
+
+            setPuedeUsarBiometria(disponible);
+          } catch {
+            setPuedeUsarBiometria(false);
+          }
         }
       } catch (error) {
         console.error(

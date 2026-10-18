@@ -4,6 +4,24 @@ import type { Sesion } from '@/types/auth';
 
 const SESSION_KEY = 'auth_session';
 
+function esSesionValida(value: unknown): value is Sesion {
+  if (
+    typeof value !== 'object' ||
+    value === null
+  ) {
+    return false;
+  }
+
+  const sesion = value as Sesion;
+
+  return (
+    typeof sesion.token === 'string' &&
+    typeof sesion.usuario?.id === 'string' &&
+    typeof sesion.usuario?.nombre === 'string' &&
+    typeof sesion.usuario?.email === 'string'
+  );
+}
+
 export async function guardarSesion(
   sesion: Sesion
 ): Promise<void> {
@@ -14,13 +32,24 @@ export async function guardarSesion(
 }
 
 export async function obtenerSesion(): Promise<Sesion | null> {
-  const value = await SecureStore.getItemAsync(SESSION_KEY);
+  const value =
+    await SecureStore.getItemAsync(SESSION_KEY);
 
   if (!value) {
     return null;
   }
 
-  return JSON.parse(value) as Sesion;
+  try {
+    const data: unknown = JSON.parse(value);
+
+    if (!esSesionValida(data)) {
+      return null;
+    }
+
+    return data;
+  } catch {
+    return null;
+  }
 }
 
 export async function eliminarSesion(): Promise<void> {
