@@ -8,6 +8,8 @@ export function useColorScheme() {
   const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
+    // La hidratación del navegador se marca una sola vez después del montaje.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasHydrated(true);
   }, []);
 

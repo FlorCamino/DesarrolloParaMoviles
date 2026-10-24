@@ -26,6 +26,16 @@ export default function AppTabs() {
           renderingMode="template"
         />
       </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="promociones">
+        <NativeTabs.Trigger.Label>Promos</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="tag.fill" md="local_offer" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="avisos">
+        <NativeTabs.Trigger.Label>Avisos</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="bell.fill" md="notifications" />
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
