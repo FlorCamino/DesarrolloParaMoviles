@@ -24,10 +24,13 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Explorá tu ciudad</Text>
-          <Text style={styles.description}>Encontrá comercios locales y conocé todo lo que tienen para ofrecer.</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/(tabs)/explore')} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
-            <Text style={styles.secondaryText}>Explorar comercios</Text>
+          <Text style={styles.cardTitle}>Promociones y beneficios</Text>
+          <Text style={styles.description}>Consultá ofertas, filtrá por rubro y guardá las que te interesan.</Text>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/(tabs)/promociones')} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+            <Text style={styles.buttonText}>Ver promociones</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/(tabs)/avisos')} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+            <Text style={styles.secondaryText}>Mis avisos y preferencias</Text>
           </Pressable>
         </View>
 
