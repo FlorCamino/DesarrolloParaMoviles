@@ -12,8 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import MapaComercios from "@/components/mapa-comercios";
-import { buscarComercios } from "@/servicios/comercios";
-import type { Comercio } from "@/tipos/comercio";
+import { buscarComercios } from "@/services/businesses";
+import type { Comercio } from "@/types/business";
 
 type Ubicacion = {
   latitude: number;

@@ -1,5 +1,5 @@
 import { COMERCIOS_MOCK } from "../mocks/comercios";
-import type { Comercio } from "../tipos/comercio";
+import type { Comercio } from "../types/business";
 
 export async function obtenerComercios(): Promise<Comercio[]> {
   return COMERCIOS_MOCK.filter((comercio) => comercio.activo);

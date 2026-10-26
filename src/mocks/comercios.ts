@@ -1,4 +1,4 @@
-import type { Comercio } from "../tipos/comercio";
+import type { Comercio } from "../types/business";
 
 export const COMERCIOS_MOCK: Comercio[] = [
   {

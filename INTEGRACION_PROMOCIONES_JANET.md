@@ -44,7 +44,7 @@ Este proyecto conserva el trabajo de Florencia (arquitectura, login, biometría,
 - `src/services/persistencia-promociones.ts`
 - `src/services/promociones.ts`
 - `src/types/promociones.ts`
-- `src/types/assets.d.ts`
+- `src/css.d.ts`
 - `src/utils/promociones.ts`
 - `pruebas/promociones.test.ts`
 - `eslint.config.js`

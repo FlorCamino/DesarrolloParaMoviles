@@ -7,7 +7,7 @@ import {
     View,
 } from "react-native";
 
-import type { Comercio } from "@/tipos/comercio";
+import type { Comercio } from "@/types/business";
 
 type Ubicacion = {
   latitude: number;

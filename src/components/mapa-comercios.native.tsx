@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 
-import type { Comercio } from "@/tipos/comercio";
+import type { Comercio } from "@/types/business";
 
 type Ubicacion = {
   latitude: number;
