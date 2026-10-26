@@ -47,10 +47,8 @@ export function textoDiasHastaVencimiento(
   if (estado === 'vencida') return 'Promoción vencida';
 
   const fechaVencimiento = new Date(promocion.hasta);
-  const venceHoy =
-    fechaVencimiento.getFullYear() === ahora.getFullYear()
-    && fechaVencimiento.getMonth() === ahora.getMonth()
-    && fechaVencimiento.getDate() === ahora.getDate();
+  const diaArgentina = (fecha: Date) => fecha.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+  const venceHoy = diaArgentina(fechaVencimiento) === diaArgentina(ahora);
 
   if (venceHoy) return 'Vence hoy';
 
@@ -64,6 +62,7 @@ export function formatearFechaArgentina(fechaIso: string): string {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    timeZone: 'America/Argentina/Buenos_Aires',
   });
 }
 

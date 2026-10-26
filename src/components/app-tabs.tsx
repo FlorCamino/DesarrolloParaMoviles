@@ -19,6 +19,14 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="comercios">
+        <NativeTabs.Trigger.Label>Comercios</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="storefront.fill" md="storefront" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="explore">
+        <NativeTabs.Trigger.Label>Mapa</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="map.fill" md="map" />
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="promociones">
         <NativeTabs.Trigger.Label>Promos</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="tag.fill" md="local_offer" />

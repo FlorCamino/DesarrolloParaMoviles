@@ -22,6 +22,12 @@ export default function AppTabs() {
           <TabTrigger name="home" href="/(tabs)" asChild>
             <TabButton>Inicio</TabButton>
           </TabTrigger>
+          <TabTrigger name="comercios" href="/(tabs)/comercios" asChild>
+            <TabButton>Comercios</TabButton>
+          </TabTrigger>
+          <TabTrigger name="mapa" href="/(tabs)/explore" asChild>
+            <TabButton>Mapa</TabButton>
+          </TabTrigger>
           <TabTrigger name="promociones" href="/(tabs)/promociones" asChild>
             <TabButton>Promos</TabButton>
           </TabTrigger>
@@ -79,6 +85,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     gap: Spacing.two,
+    flexWrap: 'wrap',
     maxWidth: MaxContentWidth,
     backgroundColor: '#F8FAFC',
     borderWidth: 1,

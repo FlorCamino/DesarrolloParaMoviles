@@ -1,3 +1,4 @@
+import { COMERCIOS_MOCK as DIRECTORIO_MOCK } from './comercios';
 import { ComercioResumen, Promocion, Rubro } from '@/types/promociones';
 
 const DIA = 24 * 60 * 60 * 1000;
@@ -14,8 +15,7 @@ export const RUBROS_MOCK: Rubro[] = [
 ];
 
 export const COMERCIOS_MOCK: ComercioResumen[] = [
-  { id: 'com-118', nombre: 'Ferretería El Tornillo', rubroId: 'rub-ferreteria', direccion: '9 de Julio 855' },
-  { id: 'com-205', nombre: 'Panadería La Unión', rubroId: 'rub-gastronomia', direccion: 'Urquiza 620' },
+  ...DIRECTORIO_MOCK.map(({ id, nombre, rubroId, direccion }) => ({ id, nombre, rubroId, direccion })),
   { id: 'com-311', nombre: 'Tienda Jacarandá', rubroId: 'rub-indumentaria', direccion: 'San Martín 945' },
   { id: 'com-404', nombre: 'Farmacia Plaza', rubroId: 'rub-salud', direccion: 'Galarza 1102' },
   { id: 'com-522', nombre: 'Tecno Centro', rubroId: 'rub-tecnologia', direccion: 'Rocamora 740' },
@@ -53,6 +53,12 @@ export const PROMOCIONES_MOCK: Promocion[] = [
     detalle: 'Con la compra de un teléfono seleccionado.',
     descuento: null, desde: isoEnDias(-1), hasta: isoEnDias(15), imagenUrl: null,
     soloApp: true, usos: 7, activa: true,
+  },
+  {
+    id: 'pro-446', comercioId: 'com-306', titulo: '10% en indumentaria de temporada',
+    detalle: 'En prendas seleccionadas. Consultar disponibilidad en el local.',
+    descuento: 10, desde: isoEnDias(-1), hasta: isoEnDias(20), imagenUrl: null,
+    soloApp: true, usos: 5, activa: true,
   },
   {
     id: 'pro-vencida', comercioId: 'com-118', titulo: 'Promo vencida de prueba',

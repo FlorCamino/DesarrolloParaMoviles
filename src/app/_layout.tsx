@@ -26,6 +26,7 @@ function AppNavigator() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="(auth)" />
+            <Stack.Screen name="comercio/[id]" options={{ headerShown: true, title: "Ficha del comercio" }} />
           </Stack>
         )
       )}
