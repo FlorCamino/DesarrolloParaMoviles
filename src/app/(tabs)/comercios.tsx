@@ -13,9 +13,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { buscarComercios } from "@/servicios/comercios";
-import { alternarFavorito, obtenerFavoritos } from "@/servicios/favoritos";
-import type { Comercio } from "@/tipos/comercio";
+import { buscarComercios } from "@/services/businesses";
+import { alternarFavorito, obtenerFavoritos } from "@/services/favorites";
+import type { Comercio } from "@/types/business";
 
 type OpcionRubro = {
   id: string | null;

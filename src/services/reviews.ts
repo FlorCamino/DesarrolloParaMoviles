@@ -1,5 +1,5 @@
 import { RESENAS_MOCK } from "../mocks/resenas";
-import type { Resena } from "../tipos/comercio";
+import type { Resena } from "../types/business";
 
 export async function obtenerResenasPorComercio(
   comercioId: string,

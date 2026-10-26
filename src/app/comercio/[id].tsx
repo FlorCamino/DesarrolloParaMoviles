@@ -13,10 +13,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { obtenerComercioPorId } from "@/servicios/comercios";
-import { alternarFavorito, obtenerFavoritos } from "@/servicios/favoritos";
-import { obtenerPromocionesVigentesPorComercio } from "@/servicios/promociones";
-import type { Comercio, Promocion } from "@/tipos/comercio";
+import { obtenerComercioPorId } from "@/services/businesses";
+import { alternarFavorito, obtenerFavoritos } from "@/services/favorites";
+import { obtenerPromocionesVigentesPorComercio } from "@/services/promociones";
+import { obtenerResenasPorComercio } from "@/services/reviews";
+import type { Comercio, Resena } from "@/types/business";
+import type { Promocion } from "@/types/promociones";
 
 const DIAS = [
   "Domingo",
@@ -53,47 +55,6 @@ function formatearFecha(fecha: string): string {
     year: "numeric",
   });
 }
-
-const RESENAS_EJEMPLO = [
-  {
-    id: "res-2210",
-    comercioId: "com-118",
-    usuarioNombre: "Marta G.",
-    estrellas: 5,
-    comentario:
-      "Tenían el tornillo raro que no conseguía en ningún lado. Excelente atención.",
-    respuesta: "¡Gracias por tu comentario! Siempre estamos para ayudarte.",
-    creadaEn: "2026-10-18T17:05:00-03:00",
-  },
-  {
-    id: "res-2211",
-    comercioId: "com-118",
-    usuarioNombre: "Carlos M.",
-    estrellas: 4,
-    comentario: "Muy buena atención y bastante variedad de herramientas.",
-    respuesta: null,
-    creadaEn: "2026-10-14T11:30:00-03:00",
-  },
-  {
-    id: "res-2212",
-    comercioId: "com-118",
-    usuarioNombre: "Lucía R.",
-    estrellas: 5,
-    comentario:
-      "Me asesoraron muy bien para elegir la pintura. Volvería a comprar.",
-    respuesta: "¡Muchas gracias por confiar en nosotros!",
-    creadaEn: "2026-10-08T16:20:00-03:00",
-  },
-  {
-    id: "res-2213",
-    comercioId: "com-205",
-    usuarioNombre: "Sofía P.",
-    estrellas: 5,
-    comentario: "Las facturas son riquísimas y siempre están frescas.",
-    respuesta: null,
-    creadaEn: "2026-10-20T09:15:00-03:00",
-  },
-];
 
 function FotoGaleria({ uri }: { uri: string }) {
   const [error, setError] = useState(false);
@@ -137,6 +98,7 @@ export default function FichaComercioScreen() {
 
   const [comercio, setComercio] = useState<Comercio | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [resenasMostrar, setResenasMostrar] = useState<Resena[]>([]);
 
   const [promociones, setPromociones] = useState<Promocion[]>([]);
   const [cargandoPromociones, setCargandoPromociones] = useState(true);
@@ -151,16 +113,20 @@ export default function FichaComercioScreen() {
       setCargando(true);
 
       try {
-        const resultado = id ? await obtenerComercioPorId(id) : null;
+        const [resultado, resenas] = id
+          ? await Promise.all([obtenerComercioPorId(id), obtenerResenasPorComercio(id)])
+          : [null, []];
 
         if (vigente) {
           setComercio(resultado);
+          setResenasMostrar(resenas);
         }
       } catch (error) {
         console.error("Error cargando comercio:", error);
 
         if (vigente) {
           setComercio(null);
+          setResenasMostrar([]);
         }
       } finally {
         if (vigente) {
@@ -295,12 +261,6 @@ export default function FichaComercioScreen() {
         .replace(/^@/, "")
         .replace(/\//g, "")}/`
     : null;
-
-  const resenasMostrar = RESENAS_EJEMPLO.filter(
-    (resena) => resena.comercioId === comercio.id,
-  ).sort(
-    (a, b) => new Date(b.creadaEn).getTime() - new Date(a.creadaEn).getTime(),
-  );
 
   return (
     <SafeAreaView style={styles.safeArea}>

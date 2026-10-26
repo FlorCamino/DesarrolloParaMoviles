@@ -29,49 +29,15 @@ export interface Comercio {
   activo: boolean;
 }
 
-export interface Promocion {
-  id: string;
-  comercioId: string;
-  titulo: string;
-  detalle: string;
-  descuento: number | null;
-  desde: string;
-  hasta: string;
-  imagenUrl: string | null;
-  soloApp: boolean;
-  usos: number;
-  activa: boolean;
-}
-
 export interface Resena {
   id: string;
   comercioId: string;
   usuarioId: string;
+  usuarioNombre: string;
   estrellas: number;
   comentario: string;
   respuesta: string | null;
   reportada: boolean;
   creadaEn: string;
   sincronizada: boolean;
-}
-
-export interface Rubro {
-  id: string;
-  nombre: string;
-  icono: string;
-  color: string;
-  orden: number;
-}
-
-export type Rol = "vecino" | "comercio";
-
-export interface Usuario {
-  id: string;
-  nombre: string;
-  email: string;
-  rol: Rol;
-  comercioId: string | null;
-  favoritos: string[];
-  rubrosDeInteres: string[];
-  avisosActivos: boolean;
 }
