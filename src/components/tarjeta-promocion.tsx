@@ -26,7 +26,7 @@ export function TarjetaPromocion({ promocion, comercio, guardada, onAbrir, onGua
   const textoVencimiento = textoDiasHastaVencimiento(promocion);
 
   return (
-    <Pressable style={styles.tarjeta} onPress={onAbrir} accessibilityRole="button">
+    <Pressable style={({ pressed }) => [styles.tarjeta, pressed && { opacity: 0.8 }]} onPress={onAbrir} accessibilityRole="button">
       <View style={styles.filaSuperior}>
         <View style={[styles.estado, estado === 'porVencer' && styles.estadoUrgente]}>
           <Text style={[styles.textoEstado, estado === 'porVencer' && styles.textoUrgente]}>
@@ -34,6 +34,8 @@ export function TarjetaPromocion({ promocion, comercio, guardada, onAbrir, onGua
           </Text>
         </View>
         <Pressable
+          accessibilityRole="button"
+          style={styles.botonGuardar}
           accessibilityLabel={guardada ? 'Quitar promoción guardada' : 'Guardar promoción'}
           hitSlop={10}
           onPress={(evento) => {
@@ -66,16 +68,16 @@ export function TarjetaPromocion({ promocion, comercio, guardada, onAbrir, onGua
 const styles = StyleSheet.create({
   tarjeta: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    marginBottom: 12,
+    borderColor: '#E2E9F4',
+    padding: 20,
+    marginBottom: 14,
     shadowColor: '#0F172A',
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.04,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    elevation: 1,
   },
   filaSuperior: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   estado: { backgroundColor: '#E6FFFA', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
@@ -83,11 +85,12 @@ const styles = StyleSheet.create({
   textoEstado: { color: '#237A6B', fontSize: 12, fontWeight: '800' },
   textoUrgente: { color: '#C53030' },
   guardar: { fontSize: 29, color: '#94A3B8' },
+  botonGuardar: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F6FC', borderRadius: 14 },
   guardada: { color: '#D69E2E' },
   comercio: { color: '#64748B', fontSize: 13, fontWeight: '700', marginTop: 8 },
-  titulo: { color: '#0F172A', fontSize: 19, fontWeight: '800', marginTop: 3 },
+  titulo: { color: '#172E62', fontSize: 20, lineHeight: 27, fontWeight: '700', marginTop: 5, letterSpacing: -0.4 },
   detalle: { color: '#475569', fontSize: 14, lineHeight: 20, marginTop: 7 },
-  pie: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
+  pie: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#E2E9F4' },
   fecha: { color: '#475569', fontSize: 13 },
   dias: { color: '#153E75', fontSize: 13, fontWeight: '800' },
   diasUrgentes: { color: '#C53030' },

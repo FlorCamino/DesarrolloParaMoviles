@@ -93,7 +93,7 @@ export default function MapaComercios({
       width: 100%;
       margin: 0;
       padding: 0;
-      background: #e5eee9;
+      background: #EEF2F9;
     }
     .leaflet-popup-content {
       font-family: Arial, sans-serif;
@@ -111,7 +111,7 @@ export default function MapaComercios({
     button {
       border: 0;
       border-radius: 6px;
-      background: #137a63;
+      background: #2455B8;
       color: white;
       padding: 8px 10px;
       font-size: 12px;
@@ -197,7 +197,7 @@ export default function MapaComercios({
             radius: 8,
             color: "#ffffff",
             weight: 3,
-            fillColor: "#2563eb",
+            fillColor: "#2455B8",
             fillOpacity: 1
           }
         ).addTo(mapa).bindPopup("Tu ubicación");

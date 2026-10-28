@@ -2,13 +2,27 @@ import * as SQLite from "expo-sqlite";
 import type { Comercio } from "../types/business";
 
 let promesaBaseDatos: Promise<SQLite.SQLiteDatabase> | null = null;
+let operacionesPendientes: Promise<void> = Promise.resolve();
+
+function encolarOperacion<T>(operacion: () => Promise<T>): Promise<T> {
+  const resultado = operacionesPendientes.then(operacion);
+  operacionesPendientes = resultado.then(() => undefined, () => undefined);
+  return resultado;
+}
 
 async function obtenerBaseDatos() {
   if (!promesaBaseDatos) {
-    promesaBaseDatos = SQLite.openDatabaseAsync("comercios.db");
+    promesaBaseDatos = inicializarBaseDatos().catch((error) => {
+      promesaBaseDatos = null;
+      throw error;
+    });
   }
 
-  const db = await promesaBaseDatos;
+  return promesaBaseDatos;
+}
+
+async function inicializarBaseDatos() {
+  const db = await SQLite.openDatabaseAsync("comercios.db");
 
   const columnas = await db.getAllAsync<{
     name: string;
@@ -35,42 +49,48 @@ async function obtenerBaseDatos() {
 export async function guardarComercios(
   comercios: Comercio[],
 ): Promise<void> {
-  const db = await obtenerBaseDatos();
-  const fechaGuardado = new Date().toISOString();
+  return encolarOperacion(async () => {
+    const db = await obtenerBaseDatos();
+    const fechaGuardado = new Date().toISOString();
 
-  await db.withTransactionAsync(async () => {
-    await db.runAsync("DELETE FROM comercios");
+    await db.withTransactionAsync(async () => {
+      await db.runAsync("DELETE FROM comercios");
 
-    for (const comercio of comercios) {
-      await db.runAsync(
-        `INSERT INTO comercios (id, datos, guardado_en)
-         VALUES (?, ?, ?)`,
-        comercio.id,
-        JSON.stringify(comercio),
-        fechaGuardado,
-      );
-    }
+      for (const comercio of comercios) {
+        await db.runAsync(
+          `INSERT INTO comercios (id, datos, guardado_en)
+           VALUES (?, ?, ?)`,
+          comercio.id,
+          JSON.stringify(comercio),
+          fechaGuardado,
+        );
+      }
+    });
   });
 }
 
 export async function leerComerciosGuardados(): Promise<Comercio[]> {
-  const db = await obtenerBaseDatos();
+  return encolarOperacion(async () => {
+    const db = await obtenerBaseDatos();
 
-  const filas = await db.getAllAsync<{
-    datos: string;
-  }>("SELECT datos FROM comercios ORDER BY id");
+    const filas = await db.getAllAsync<{
+      datos: string;
+    }>("SELECT datos FROM comercios ORDER BY id");
 
-  return filas.map((fila) => JSON.parse(fila.datos) as Comercio);
+    return filas.map((fila) => JSON.parse(fila.datos) as Comercio);
+  });
 }
 
 export async function obtenerFechaGuardado(): Promise<string | null> {
-  const db = await obtenerBaseDatos();
+  return encolarOperacion(async () => {
+    const db = await obtenerBaseDatos();
 
-  const fila = await db.getFirstAsync<{
-    guardado_en: string | null;
-  }>(
-    "SELECT MAX(guardado_en) AS guardado_en FROM comercios",
-  );
+    const fila = await db.getFirstAsync<{
+      guardado_en: string | null;
+    }>(
+      "SELECT MAX(guardado_en) AS guardado_en FROM comercios",
+    );
 
-  return fila?.guardado_en ?? null;
+    return fila?.guardado_en ?? null;
+  });
 }

@@ -12,7 +12,7 @@ export function ChipFiltro({ texto, seleccionado, onPress }: Props) {
       accessibilityRole="button"
       accessibilityState={{ selected: seleccionado }}
       onPress={onPress}
-      style={[styles.chip, seleccionado && styles.chipSeleccionado]}
+      style={({ pressed }) => [styles.chip, seleccionado && styles.chipSeleccionado, pressed && { opacity: 0.75 }]}
     >
       <Text style={[styles.texto, seleccionado && styles.textoSeleccionado]}>{texto}</Text>
     </Pressable>
@@ -22,16 +22,18 @@ export function ChipFiltro({ texto, seleccionado, onPress }: Props) {
 const styles = StyleSheet.create({
   chip: {
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#DCE6FA',
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 9,
+    minHeight: 44,
+    justifyContent: 'center',
     marginRight: 8,
     backgroundColor: '#FFFFFF',
   },
   chipSeleccionado: {
-    backgroundColor: '#153E75',
-    borderColor: '#153E75',
+    backgroundColor: '#2455B8',
+    borderColor: '#2455B8',
   },
   texto: { color: '#334155', fontSize: 14, fontWeight: '600' },
   textoSeleccionado: { color: '#FFFFFF' },

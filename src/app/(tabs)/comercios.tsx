@@ -545,6 +545,7 @@ const styles = StyleSheet.create({
 
   filaResultados: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 14,
@@ -552,6 +553,8 @@ const styles = StyleSheet.create({
   },
   encabezadoResultados: {
     flexShrink: 1,
+    flexGrow: 1,
+    minWidth: 140,
   },
   tituloResultados: {
     color: "#1E3A8A",
@@ -611,10 +614,10 @@ const styles = StyleSheet.create({
   },
   tarjeta: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 22,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#E2E9F4",
   },
   tarjetaPresionada: {
     opacity: 0.8,
@@ -640,8 +643,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   nombreComercio: {
-    color: "#1E3A8A",
-    fontSize: 15,
+    color: "#172E62",
+    fontSize: 17,
+    lineHeight: 23,
     fontWeight: "700",
   },
   rubroComercio: {
@@ -656,8 +660,8 @@ const styles = StyleSheet.create({
   },
   descripcion: {
     color: "#64748B",
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 21,
     marginTop: 14,
   },
   separador: {

@@ -293,7 +293,7 @@ export default function MapaScreen() {
             <View style={styles.cargando}>
               <ActivityIndicator
                 size="large"
-                color="#137A63"
+                color="#2455B8"
               />
               <Text style={styles.textoCargando}>
                 Cargando comercios...
@@ -351,7 +351,7 @@ export default function MapaScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F7F5",
+    backgroundColor: "#F3F6FC",
   },
   encabezado: {
     paddingHorizontal: 16,
@@ -370,13 +370,13 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 15,
-    backgroundColor: "#DDF4EC",
+    backgroundColor: "#E8EFFF",
     alignItems: "center",
     justifyContent: "center",
   },
   iconoTexto: {
     fontSize: 30,
-    color: "#137A63",
+    color: "#2455B8",
   },
   titulos: {
     flex: 1,
@@ -385,17 +385,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1,
-    color: "#137A63",
+    color: "#2455B8",
     marginBottom: 4,
   },
   titulo: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#172D2A",
+    color: "#172E62",
   },
   subtitulo: {
     fontSize: 14,
-    color: "#647873",
+    color: "#536582",
     marginTop: 12,
   },
   estadoConexion: {
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     gap: 7,
     marginTop: 12,
-    backgroundColor: "#EAF7EF",
+    backgroundColor: "#E8EFFF",
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 20,
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#15803D",
+    backgroundColor: "#2455B8",
   },
   puntoSinConexion: {
     backgroundColor: "#B45309",
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#64748B",
   },
   textoConexion: {
-    color: "#166534",
+    color: "#2455B8",
     fontSize: 12,
     fontWeight: "600",
   },
@@ -459,12 +459,12 @@ const styles = StyleSheet.create({
   tituloMapa: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#172D2A",
+    color: "#172E62",
   },
   etiquetaMapa: {
     fontSize: 10,
     fontWeight: "800",
-    color: "#137A63",
+    color: "#2455B8",
     letterSpacing: 1,
   },
   tarjetaMapa: {
@@ -472,20 +472,20 @@ const styles = StyleSheet.create({
     minHeight: 180,
     overflow: "hidden",
     borderRadius: 20,
-    backgroundColor: "#E5EEE9",
+    backgroundColor: "#EEF2F9",
     borderWidth: 1,
-    borderColor: "#E0EAE4",
+    borderColor: "#E2E9F4",
   },
   cargando: {
     ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    backgroundColor: "#F3F7F5",
+    backgroundColor: "#F3F6FC",
     zIndex: 1,
   },
   textoCargando: {
-    color: "#47665D",
+    color: "#536582",
     fontSize: 13,
   },
   panelInferior: {
@@ -506,13 +506,13 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: "#DDF4EC",
+    backgroundColor: "#E8EFFF",
     alignItems: "center",
     justifyContent: "center",
   },
   iconoUbicacionTexto: {
     fontSize: 27,
-    color: "#137A63",
+    color: "#2455B8",
   },
   detalleTexto: {
     flex: 1,
@@ -520,12 +520,12 @@ const styles = StyleSheet.create({
   tituloUbicacion: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#172D2A",
+    color: "#172E62",
     marginBottom: 3,
   },
   mensaje: {
     fontSize: 12,
-    color: "#647873",
+    color: "#536582",
     lineHeight: 17,
   },
   boton: {
@@ -536,10 +536,10 @@ const styles = StyleSheet.create({
     gap: 9,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: "#137A63",
+    backgroundColor: "#2455B8",
   },
   botonPresionado: {
-    backgroundColor: "#0E6250",
+    backgroundColor: "#1E3A8A",
   },
   botonDeshabilitado: {
     opacity: 0.8,
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   },
   credito: {
     textAlign: "center",
-    color: "#81918B",
+    color: "#64748B",
     fontSize: 10,
     marginTop: 8,
   },
@@ -574,18 +574,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 20,
-    backgroundColor: "#EDF3F0",
+    backgroundColor: "#F0F5FF",
     borderWidth: 1,
-    borderColor: "#DCE8E2",
+    borderColor: "#DCE6FA",
   },
   chipRubroActivo: {
-    backgroundColor: "#137A63",
-    borderColor: "#137A63",
+    backgroundColor: "#2455B8",
+    borderColor: "#2455B8",
   },
   textoChip: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#47665D",
+    color: "#536582",
   },
   textoChipActivo: {
     color: "#FFFFFF",
@@ -594,6 +594,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     fontSize: 12,
-    color: "#647873",
+    color: "#536582",
   },
 });
