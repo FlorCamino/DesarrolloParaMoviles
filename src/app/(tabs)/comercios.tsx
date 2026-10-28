@@ -212,9 +212,11 @@ export default function HomeScreen() {
 
         <Text style={styles.tituloSeccion}>Explorá por rubro</Text>
 
+
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0, flexShrink: 0 }}
           contentContainerStyle={styles.rubros}
         >
           {RUBROS.map((rubro) => {
@@ -224,7 +226,10 @@ export default function HomeScreen() {
               <Pressable
                 key={rubro.nombre}
                 onPress={() => setRubroSeleccionado(rubro.id)}
-                style={[styles.chip, seleccionado && styles.chipSeleccionado]}
+                style={[
+                  styles.chip,
+                  seleccionado && styles.chipSeleccionado,
+                ]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: seleccionado }}
               >
@@ -233,6 +238,7 @@ export default function HomeScreen() {
                     styles.textoChip,
                     seleccionado && styles.textoChipSeleccionado,
                   ]}
+                  numberOfLines={1}
                 >
                   {rubro.nombre}
                 </Text>
@@ -240,6 +246,7 @@ export default function HomeScreen() {
             );
           })}
         </ScrollView>
+
 
         <View style={styles.filaResultados}>
           <View style={styles.encabezadoResultados}>
@@ -502,29 +509,40 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   rubros: {
+    alignItems: "center",
     gap: 8,
-    paddingBottom: 22,
+    paddingHorizontal: 2,
+    paddingVertical: 4,
   },
+
   chip: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    height: 38,
+    paddingHorizontal: 14,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 30,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
   },
+
   chipSeleccionado: {
     backgroundColor: "#1E3A8A",
     borderColor: "#1E3A8A",
   },
+
   textoChip: {
     color: "#64748B",
     fontSize: 12,
     fontWeight: "600",
+    lineHeight: 16,
+    includeFontPadding: false,
   },
+
   textoChipSeleccionado: {
     color: "#FFFFFF",
   },
+
   filaResultados: {
     flexDirection: "row",
     justifyContent: "space-between",

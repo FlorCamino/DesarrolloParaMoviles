@@ -23,7 +23,7 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Label>Comercios</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="storefront.fill" md="storefront" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="explore">
+      <NativeTabs.Trigger name="mapa">
         <NativeTabs.Trigger.Label>Mapa</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="map.fill" md="map" />
       </NativeTabs.Trigger>
