@@ -212,9 +212,11 @@ export default function HomeScreen() {
 
         <Text style={styles.tituloSeccion}>Explorá por rubro</Text>
 
+
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0, flexShrink: 0 }}
           contentContainerStyle={styles.rubros}
         >
           {RUBROS.map((rubro) => {
@@ -224,7 +226,10 @@ export default function HomeScreen() {
               <Pressable
                 key={rubro.nombre}
                 onPress={() => setRubroSeleccionado(rubro.id)}
-                style={[styles.chip, seleccionado && styles.chipSeleccionado]}
+                style={[
+                  styles.chip,
+                  seleccionado && styles.chipSeleccionado,
+                ]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: seleccionado }}
               >
@@ -233,6 +238,7 @@ export default function HomeScreen() {
                     styles.textoChip,
                     seleccionado && styles.textoChipSeleccionado,
                   ]}
+                  numberOfLines={1}
                 >
                   {rubro.nombre}
                 </Text>
@@ -240,6 +246,7 @@ export default function HomeScreen() {
             );
           })}
         </ScrollView>
+
 
         <View style={styles.filaResultados}>
           <View style={styles.encabezadoResultados}>
@@ -502,31 +509,43 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   rubros: {
+    alignItems: "center",
     gap: 8,
-    paddingBottom: 22,
+    paddingHorizontal: 2,
+    paddingVertical: 4,
   },
+
   chip: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    height: 38,
+    paddingHorizontal: 14,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 30,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
   },
+
   chipSeleccionado: {
     backgroundColor: "#1E3A8A",
     borderColor: "#1E3A8A",
   },
+
   textoChip: {
     color: "#64748B",
     fontSize: 12,
     fontWeight: "600",
+    lineHeight: 16,
+    includeFontPadding: false,
   },
+
   textoChipSeleccionado: {
     color: "#FFFFFF",
   },
+
   filaResultados: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 14,
@@ -534,6 +553,8 @@ const styles = StyleSheet.create({
   },
   encabezadoResultados: {
     flexShrink: 1,
+    flexGrow: 1,
+    minWidth: 140,
   },
   tituloResultados: {
     color: "#1E3A8A",
@@ -593,10 +614,10 @@ const styles = StyleSheet.create({
   },
   tarjeta: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 22,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#E2E9F4",
   },
   tarjetaPresionada: {
     opacity: 0.8,
@@ -622,8 +643,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   nombreComercio: {
-    color: "#1E3A8A",
-    fontSize: 15,
+    color: "#172E62",
+    fontSize: 17,
+    lineHeight: 23,
     fontWeight: "700",
   },
   rubroComercio: {
@@ -638,8 +660,8 @@ const styles = StyleSheet.create({
   },
   descripcion: {
     color: "#64748B",
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 21,
     marginTop: 14,
   },
   separador: {

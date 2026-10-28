@@ -3,14 +3,14 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 export default function AppTabs() {
   return (
     <NativeTabs
-      backgroundColor="#F8FAFC"
+      backgroundColor="#FFFFFF"
       disableTransparentOnScrollEdge
       shadowColor="#E2E8F0"
-      rippleColor="#E0F2FE"
-      indicatorColor="#E0F2FE"
-      tintColor="#1E3A8A"
-      iconColor={{ default: '#64748B', selected: '#1E3A8A' }}
-      labelStyle={{ color: '#64748B', selected: { color: '#1E3A8A', fontWeight: '600' } }}>
+      rippleColor="#E8EFFF"
+      indicatorColor="#E8EFFF"
+      tintColor="#2455B8"
+      iconColor={{ default: '#64748B', selected: '#2455B8' }}
+      labelStyle={{ color: '#64748B', selected: { color: '#2455B8', fontWeight: '600' } }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Inicio</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
@@ -23,7 +23,7 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Label>Comercios</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="storefront.fill" md="storefront" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="explore">
+      <NativeTabs.Trigger name="mapa">
         <NativeTabs.Trigger.Label>Mapa</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="map.fill" md="map" />
       </NativeTabs.Trigger>

@@ -1,42 +1,35 @@
-import { COMERCIOS_MOCK } from "../mocks/comercios";
 import type { Comercio } from "../types/business";
+import {
+  obtenerComercioPorId as obtenerComercioGuardado,
+  obtenerComercios as obtenerComerciosConCache,
+} from "./comercios";
 
 export async function obtenerComercios(): Promise<Comercio[]> {
-  return COMERCIOS_MOCK.filter((comercio) => comercio.activo);
+  return obtenerComerciosConCache();
 }
 
 export async function obtenerComercioPorId(
   id: string,
 ): Promise<Comercio | null> {
-  const comercio = COMERCIOS_MOCK.find((item) => item.id === id && item.activo);
-
-  return comercio ?? null;
-}
-
-function normalizarTexto(texto: string): string {
-  return texto
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
+  return obtenerComercioGuardado(id);
 }
 
 export async function buscarComercios(
   termino: string,
   rubroId?: string,
 ): Promise<Comercio[]> {
-  const comercios = await obtenerComercios();
-  const busqueda = normalizarTexto(termino);
+  const comercios = await obtenerComerciosConCache();
+  const busqueda = termino.trim().toLocaleLowerCase("es-AR");
 
   return comercios.filter((comercio) => {
-    const coincideTexto =
-      busqueda.length === 0 ||
-      [comercio.nombre, comercio.descripcion, comercio.direccion].some(
-        (campo) => normalizarTexto(campo).includes(busqueda),
-      );
+    const coincideBusqueda =
+      !busqueda ||
+      comercio.nombre.toLocaleLowerCase("es-AR").includes(busqueda) ||
+      comercio.direccion.toLocaleLowerCase("es-AR").includes(busqueda) ||
+      comercio.descripcion.toLocaleLowerCase("es-AR").includes(busqueda);
 
     const coincideRubro = !rubroId || comercio.rubroId === rubroId;
 
-    return coincideTexto && coincideRubro;
+    return coincideBusqueda && coincideRubro;
   });
 }
