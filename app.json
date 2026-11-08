@@ -48,6 +48,18 @@
       "expo-sqlite",
       "expo-video",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Permitir que Directorio de Comercios use tu cámara para escanear el código QR de las promociones."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermissions": "Permitir que Directorio de Comercios acceda a tus fotos para subir imágenes de tu comercio."
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Permitir que Directorio de Comercios use tu ubicación para mostrar comercios cercanos."
