@@ -48,6 +48,11 @@ export default function HomeScreen() {
             <>
               <Text style={styles.cardTitle}>Hola, {usuario.nombre}</Text>
               <Text style={styles.description}>Sesión iniciada como {usuario.rol}</Text>
+              {usuario.rol === 'comercio' && (
+                <Pressable accessibilityRole="button" onPress={() => router.push('/panel_socio')} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+                  <Text style={styles.buttonText}>Ir al panel de mi comercio</Text>
+                </Pressable>
+              )}
               <Pressable accessibilityRole="button" onPress={logout} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
                 <Text style={styles.secondaryText}>Cerrar sesión</Text>
               </Pressable>
