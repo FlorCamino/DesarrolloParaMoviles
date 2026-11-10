@@ -14,9 +14,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { buscarComercios } from "@/services/businesses";
 import { usePromociones } from "@/contexts/promociones-context";
 import { useAuth } from "@/hooks/use-auth";
+import { buscarComercios } from "@/services/businesses";
 import type { Comercio } from "@/types/business";
 
 type OpcionRubro = {
@@ -160,7 +160,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" />
 
       <View style={styles.container}>
         <View style={styles.header}>
