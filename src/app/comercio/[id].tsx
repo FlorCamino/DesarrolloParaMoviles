@@ -1,8 +1,9 @@
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Linking,
   Pressable,
@@ -14,7 +15,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { obtenerComercioPorId } from "@/services/businesses";
-import { alternarFavorito, obtenerFavoritos } from "@/services/favorites";
+import { usePromociones } from "@/contexts/promociones-context";
+import { useAuth } from "@/hooks/use-auth";
 import { obtenerPromocionesVigentesPorComercio } from "@/services/promociones";
 import { obtenerResenasPorComercio } from "@/services/reviews";
 import type { Comercio, Resena } from "@/types/business";
@@ -103,7 +105,9 @@ export default function FichaComercioScreen() {
   const [promociones, setPromociones] = useState<Promocion[]>([]);
   const [cargandoPromociones, setCargandoPromociones] = useState(true);
 
-  const [favorito, setFavorito] = useState(false);
+  const { usuario } = useAuth();
+  const { preferencias, alternarComercioFavorito } = usePromociones();
+  const favorito = Boolean(usuario && id && preferencias.comerciosFavoritos.includes(id));
   const [guardandoFavorito, setGuardandoFavorito] = useState(false);
 
   useEffect(() => {
@@ -181,24 +185,6 @@ export default function FichaComercioScreen() {
     };
   }, [id]);
 
-  useEffect(() => {
-    let vigente = true;
-
-    obtenerFavoritos()
-      .then((ids) => {
-        if (vigente && id) {
-          setFavorito(ids.includes(id));
-        }
-      })
-      .catch((error) => {
-        console.error("Error cargando favoritos:", error);
-      });
-
-    return () => {
-      vigente = false;
-    };
-  }, [id]);
-
   async function abrirEnlace(url: string | null | undefined) {
     if (!url) {
       return;
@@ -214,11 +200,17 @@ export default function FichaComercioScreen() {
   async function cambiarFavorito() {
     if (!comercio || guardandoFavorito) return;
 
+    if (!usuario) {
+      Alert.alert("Iniciá sesión", "Necesitás una cuenta para guardar comercios favoritos.", [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Ingresar", onPress: () => router.push("/login") },
+      ]);
+      return;
+    }
     setGuardandoFavorito(true);
 
     try {
-      const actualizados = await alternarFavorito(comercio.id);
-      setFavorito(actualizados.includes(comercio.id));
+      await alternarComercioFavorito(comercio.id);
     } catch (error) {
       console.error("Error actualizando favorito:", error);
     } finally {

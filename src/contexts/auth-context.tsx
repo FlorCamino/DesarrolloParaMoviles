@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useEffect, useState } from 'react';
 
-import { login as loginService, registrar as registrarService, } from '@/services/auth';
+import { login as loginService, registrar as registrarService, obtenerUsuarioActual } from '@/services/auth';
 import { eliminarSesion, guardarSesion, obtenerSesion, } from '@/services/session-storage';
 
 import { autenticarConBiometria, biometriaDisponible } from '@/services/biometric';
@@ -8,6 +8,7 @@ import { autenticarConBiometria, biometriaDisponible } from '@/services/biometri
 import type { LoginCredentials, RegistroData, Sesion, } from '@/types/auth';
 
 import type { Usuario } from '@/types/usuario';
+import { ErrorHttp } from '@/services/http';
 
 interface AuthContextData {
   sesion: Sesion | null;
@@ -103,6 +104,7 @@ export function AuthProvider({
       await guardarSesion(nuevaSesion);
 
       setSesion(nuevaSesion);
+      setSesionPendiente(null);
     } finally {
       setLoading(false);
     }
@@ -114,7 +116,11 @@ export function AuthProvider({
     try {
       setLoading(true);
 
-      return await registrarService(data);
+      const nuevaSesion = await registrarService(data);
+      await guardarSesion(nuevaSesion);
+      setSesion(nuevaSesion);
+      setSesionPendiente(null);
+      return nuevaSesion.usuario;
     } finally {
       setLoading(false);
     }
@@ -139,7 +145,19 @@ export function AuthProvider({
       return false;
     }
 
-    setSesion(sesionPendiente);
+    let sesionActualizada = sesionPendiente;
+    try {
+      const usuario = await obtenerUsuarioActual(sesionPendiente.token);
+      sesionActualizada = { ...sesionPendiente, usuario };
+      await guardarSesion(sesionActualizada);
+    } catch (error) {
+      if (error instanceof ErrorHttp && error.estado === 401) {
+        await logout();
+        throw new Error('Tu sesión venció. Ingresá nuevamente con email y contraseña.');
+      }
+      if (!(error instanceof ErrorHttp && error.estado === 0)) throw error;
+    }
+    setSesion(sesionActualizada);
     setSesionPendiente(null);
 
     return true;
