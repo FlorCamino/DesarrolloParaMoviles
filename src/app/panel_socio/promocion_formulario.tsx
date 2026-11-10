@@ -21,6 +21,7 @@ export default function PromocionFormularioScreen() {
     const [detalle, setDetalle] = useState('');
     const [descuento, setDescuento] = useState('');
     const [dias, setDias] = useState('7');
+    const [fechaReferencia] = useState(() => Date.now());
     const [diasInicio, setDiasInicio] = useState('0');
     const [yaEmpezo, setYaEmpezo] = useState(false);
     const [soloApp, setSoloApp] = useState(false);
@@ -131,7 +132,9 @@ const textoVentana = (() => {
     if (yaEmpezo || !Number.isInteger(i) || !Number.isInteger(d) || i < 0 || d < 1) return null;
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    const inicio = new Date(i === 0 ? Date.now() : hoy.getTime() + i * DIA);
+    const inicio = new Date(
+        i === 0 ? fechaReferencia : hoy.getTime() + i * DIA
+    );
     const fin = new Date(inicio.getTime() + d * DIA - 60000);
     return `Empieza ${i === 0 ? 'hoy' : 'el ' + formatearFechaArgentina(inicio.toISOString())} y termina el ${formatearFechaArgentina(fin.toISOString())}.`;
 })();
