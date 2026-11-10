@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "tfidesmovequipo65",
     "userInterfaceStyle": "automatic",
+    "owner": "equipo65-directorio",
     "ios": {
       "icon": "./assets/expo.icon"
     },

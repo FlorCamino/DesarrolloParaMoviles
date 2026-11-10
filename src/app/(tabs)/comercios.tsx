@@ -1,8 +1,8 @@
+import { useAvisoLogin } from '@/contexts/aviso-login-context';
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   ScrollView,
@@ -71,6 +71,7 @@ function estaAbiertoAhora(comercio: Comercio): boolean {
 
 export default function HomeScreen() {
   const { usuario } = useAuth();
+  const pedirLogin = useAvisoLogin();
   const { preferencias, alternarComercioFavorito } = usePromociones();
   const favoritos = usuario ? preferencias.comerciosFavoritos : [];
   const [soloFavoritos, setSoloFavoritos] = useState(false);
@@ -136,10 +137,7 @@ export default function HomeScreen() {
     }
 
     if (!usuario) {
-      Alert.alert("Iniciá sesión", "Necesitás una cuenta para guardar comercios favoritos.", [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Ingresar", onPress: () => router.push("/login") },
-      ]);
+      pedirLogin("Necesitás una cuenta para guardar comercios favoritos.");
       return;
     }
     setGuardandoFavorito(comercioId);

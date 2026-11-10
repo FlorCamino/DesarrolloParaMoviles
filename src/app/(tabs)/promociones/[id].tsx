@@ -1,6 +1,7 @@
+import { useAvisoLogin } from '@/contexts/aviso-login-context';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
 import { EstadoPantalla } from '@/components/estado-pantalla';
 import { usePromociones } from '@/contexts/promociones-context';
@@ -15,6 +16,7 @@ import {
 
 export default function DetallePromocionScreen() {
   const { usuario } = useAuth();
+  const pedirLogin = useAvisoLogin();
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
     promociones, comercios, preferencias,
@@ -50,10 +52,7 @@ export default function DetallePromocionScreen() {
 
   function validarIngreso(): boolean {
     if (usuario) return true;
-    Alert.alert('Iniciá sesión', 'Necesitás una cuenta para guardar favoritos y utilizar promociones.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Ingresar', onPress: () => router.push('/login') },
-    ]);
+    pedirLogin('Necesitás una cuenta para guardar favoritos y utilizar promociones.');
     return false;
   }
 
