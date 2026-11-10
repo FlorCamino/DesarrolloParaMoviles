@@ -36,14 +36,17 @@ export async function darDeBajaPromocion(comercioId: string, id: string): Promis
   void comercioId;
   await solicitarApi<void>(`/mi-comercio/promociones/${encodeURIComponent(id)}`, json('DELETE'), await tokenObligatorio());
 }
-export async function validarCodigo(comercioId: string, codigoLeido: string): Promise<{promocion: Promocion; uso: UsoDePromocion}> {
+export async function validarCodigo(comercioId: string, codigoLeido: string): Promise<{promocion: Promocion | null; uso: UsoDePromocion}> {
   void comercioId;
   const uso = (await solicitarApi<UsoDePromocion>('/mi-comercio/usos/validar',json('POST',{codigo:codigoLeido.trim()}),await tokenObligatorio())).datos;
-  const promociones = await listarMisPromociones('');
-  const promocion = promociones.find(p => p.id === uso.promocionId);
-  if (!promocion) throw new Error('Código validado, pero no fue posible cargar la promoción.');
-  return {promocion,uso};
+  try {
+    const promociones = await listarMisPromociones('');
+    return {promocion: promociones.find(p => p.id === uso.promocionId) ?? null, uso};
+  } catch {
+    return {promocion: null, uso};
+  }
 }
+
 export async function obtenerMiComercio(comercioId: string): Promise<Comercio> {
   void comercioId;
   return (await solicitarApi<Comercio>('/mi-comercio', {}, await tokenObligatorio())).datos;
