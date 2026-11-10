@@ -58,7 +58,7 @@ export default function ResenasScreen() {
     }
 
     function confirmarReporte(resena: Resena) {
-        Alert.alert('Repotar reseña', 'La reseña se marcará como ofensiva para su revisión, ¿quiere reportarla?',
+        Alert.alert('Reportar reseña', 'La reseña se marcará como ofensiva para su revisión, ¿quiere reportarla?',
             [
                 {text: 'Cancelar', style: 'cancel'},
                 {
@@ -67,7 +67,7 @@ export default function ResenasScreen() {
                             await reportarResena(resena.id);
                             await cargar();
                         } catch (error) {
-                            Alert.alert('No se puedo reportar', error instanceof Error ? error.message : 'Intente nuevamente.');
+                            Alert.alert('No se pudo reportar', error instanceof Error ? error.message : 'Intente nuevamente.');
                         }
                     },
                 },

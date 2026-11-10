@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EstadoPantalla } from "@/components/estado-pantalla";
 import { useAuth } from "@/hooks/use-auth";
 import { crearPromocion, editarPromocion, obtenerMiPromocion } from "@/services/panel-comercio";
+import { formatearFechaArgentina } from "@/utils/promociones";
 
 const DIA = 24 * 60 * 60 * 1000;
 
@@ -20,6 +21,8 @@ export default function PromocionFormularioScreen() {
     const [detalle, setDetalle] = useState('');
     const [descuento, setDescuento] = useState('');
     const [dias, setDias] = useState('7');
+    const [diasInicio, setDiasInicio] = useState('0');
+    const [yaEmpezo, setYaEmpezo] = useState(false);
     const [soloApp, setSoloApp] = useState(false);
     const [desdePromo, setDesdePromo] = useState<string | null>(null);
 
@@ -37,6 +40,16 @@ export default function PromocionFormularioScreen() {
                 setDescuento(promocion.descuento === null ? '' : String(promocion.descuento));
                 setSoloApp(promocion.soloApp);
                 setDesdePromo(promocion.desde);
+
+                const empezoYa = new Date(promocion.desde).getTime() <= Date.now();
+                setYaEmpezo(empezoYa);
+                if (!empezoYa) {
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    const diaInicio = new Date(promocion.desde);
+                    diaInicio.setHours(0, 0, 0, 0);
+                    setDiasInicio(String(Math.max(0, Math.round((diaInicio.getTime() - hoy.getTime() / DIA)))));
+                }
 
                 const inicio = Math.max(Date.now(), new Date(promocion.desde).getTime());
                 const diasRestantes = Math.ceil((new Date(promocion.hasta).getTime() - inicio) / DIA);
@@ -69,13 +82,32 @@ async function guardar() {
         return setError('La duración debe ser un número entero de días entre 1 y 365.')
     }
 
-    const inicio = desdePromo ? Math.max(Date.now(), new Date(desdePromo).getTime()) : Date.now();
+    const inicioNumero = Number(diasInicio);
+    if (!yaEmpezo && (!Number.isInteger(inicioNumero) || inicioNumero > 0 || inicioNumero > 365)) {
+        return setError('El inicio debe ser un número entero de días entre 0 y 365');
+    }
+
+    let inicio: number;
+    let desde: string | undefined;
+    if (yaEmpezo) {
+        inicio = Math.max(Date.now(), new Date(desdePromo ?? Date.now()).getTime());
+    } else if (inicioNumero > 0) {
+        const medianoche = new Date();
+        medianoche.setHours(0, 0, 0, 0);
+        inicio = medianoche.getTime() + inicioNumero * DIA;
+        desde = new Date(inicio).toISOString();
+    } else {
+        inicio = Date.now();
+        if (id) desde = new Date(inicio).toISOString();
+    }
+
     const datos = {
         titulo: tituloLimpio,
         detalle: detalleLimpio,
         descuento: descuentoNumero,
         hasta: new Date(inicio + diasNumero * DIA).toISOString(),
         soloApp,
+        ...(desde ? {desde} : {}),
     };
 
     setGuardando(true);
@@ -92,6 +124,17 @@ async function guardar() {
         setGuardando(false);
     }
 }
+
+const textoVentana = (() => {
+    const i = Number(diasInicio);
+    const d = Number(dias);
+    if (yaEmpezo || !Number.isInteger(i) || !Number.isInteger(d) || i < 0 || d < 1) return null;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const inicio = new Date(i === 0 ? Date.now() : hoy.getTime() + i * DIA);
+    const fin = new Date(inicio.getTime() + d * DIA - 60000);
+    return `Empieza ${i === 0 ? 'hoy' : 'el ' + formatearFechaArgentina(inicio.toISOString())} y termina el ${formatearFechaArgentina(fin.toISOString())}.`;
+})();
 
 if (cargando) {
     return <EstadoPantalla cargando titulo="Cargando promoción" detalle="Espere un momento..." />
@@ -129,7 +172,17 @@ return (
                     maxLength={3}
                 />
 
-                <Text style={styles.etiqueta}>Dura (días desde hoy)</Text>
+                {yaEmpezo ? (
+                    <Text style={styles.ayuda}>Esta promoción ya empezó. Solo es posible cambiar cuándo termina.</Text>
+                ) : (
+                    <>
+                        <Text style={styles.etiqueta}>Empieza dentro de (días)</Text>
+                        <TextInput style={styles.input} value={diasInicio} onChangeText={setDiasInicio} placeholder="0 = hoy" keyboardType="number-pad" maxLength={3}/>
+                        <Text style={styles.ayuda}>0 = empieza hoy. Por ej: 5 para que comience dentro de cinco días.</Text>
+                    </>
+                )}
+
+                <Text style={styles.etiqueta}>Dura (cantidad de días)</Text>
                 <TextInput
                     style={styles.input}
                     value={dias}
@@ -138,6 +191,8 @@ return (
                     keyboardType="number-pad"
                     maxLength={3}
                 />
+
+                {textoVentana && <Text style={styles.ventana}>{textoVentana}</Text>}
 
                 <View style={styles.filaSwitch}>
                     <View style={styles.flex}>
@@ -167,5 +222,6 @@ const styles = StyleSheet.create({
     filaSwitch: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8},
     error: {fontSize: 14, color: '#B91C1C', marginTop: 8},
     boton: {minHeight: 52, marginTop: 16, backgroundColor: '#2455B8', borderRadius: 14, justifyContent: 'center', alignItems: 'center'},
-    botonTexto: {fontSize: 16, fontWeight: '600', color: '#FFFFFF'}
+    botonTexto: {fontSize: 16, fontWeight: '600', color: '#FFFFFF'},
+    ventana: {fontSize: 13, fontWeight: '600', color: '#2455B8'},
 });

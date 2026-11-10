@@ -14,13 +14,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { obtenerComercioPorId } from "@/services/businesses";
 import { usePromociones } from "@/contexts/promociones-context";
 import { useAuth } from "@/hooks/use-auth";
+import { obtenerComercioPorId } from "@/services/businesses";
 import { obtenerPromocionesVigentesPorComercio } from "@/services/promociones";
 import { obtenerResenasPorComercio } from "@/services/reviews";
 import type { Comercio, Resena } from "@/types/business";
 import type { Promocion } from "@/types/promociones";
+
+import { ResenasSeccion } from "@/components/resenas-seccion";
 
 const DIAS = [
   "Domingo",
@@ -215,6 +217,20 @@ export default function FichaComercioScreen() {
       console.error("Error actualizando favorito:", error);
     } finally {
       setGuardandoFavorito(false);
+    }
+  }
+
+  async function recargarResenas() {
+    if (!id) return;
+    try {
+      const [resultado, resenas] = await Promise.all([
+        obtenerComercioPorId(id),
+        obtenerResenasPorComercio(id),
+      ]);
+      setComercio(resultado);
+      setResenasMostrar(resenas);
+    } catch (error) {
+      console.error('Error recargando reseñas', error);
     }
   }
 
@@ -484,42 +500,8 @@ export default function FichaComercioScreen() {
             </Text>
           </View>
 
-          {resenasMostrar.length > 0 ? (
-            resenasMostrar.map((resena) => (
-              <View key={resena.id} style={styles.resenaItem}>
-                <View style={styles.filaResena}>
-                  <Text style={styles.valorDato}>{resena.usuarioNombre}</Text>
+          <ResenasSeccion comercioId={comercio.id} resenas={resenasMostrar} onCambio={recargarResenas}/>
 
-                  <Text style={styles.estrellasResena}>
-                    {"★".repeat(resena.estrellas)}
-                    {"☆".repeat(5 - resena.estrellas)}
-                  </Text>
-                </View>
-
-                <Text style={styles.fechaResena}>
-                  {formatearFecha(resena.creadaEn)}
-                </Text>
-
-                <Text style={styles.comentarioResena}>{resena.comentario}</Text>
-
-                {resena.respuesta ? (
-                  <View style={styles.respuestaComercio}>
-                    <Text style={styles.etiquetaRespuesta}>
-                      Respuesta del comercio
-                    </Text>
-
-                    <Text style={styles.comentarioResena}>
-                      {resena.respuesta}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            ))
-          ) : (
-            <Text style={styles.textoSecundario}>
-              Este comercio todavía no tiene reseñas de ejemplo.
-            </Text>
-          )}
         </View>
 
         {videoUrl ? (
