@@ -1,110 +1,43 @@
-import { COMERCIOS_MOCK, PROMOCIONES_MOCK, RUBROS_MOCK } from '@/mocks/promociones';
-import {
-  ComercioResumen,
-  ModoDemo,
-  Promocion,
-  RespuestaApi,
-  Rubro,
-  UsoDePromocion,
-} from '@/types/promociones';
-import { obtenerEstadoPromocion, ordenarPromociones } from '@/utils/promociones';
-
-const esperar = (milisegundos: number) =>
-  new Promise<void>((resolver) => setTimeout(resolver, milisegundos));
+import type { ComercioResumen, ModoDemo, Promocion, RespuestaApi, Rubro, UsoDePromocion } from '@/types/promociones';
+import type { Comercio } from '@/types/business';
+import { solicitarApi } from './api';
+import { json, listarTodo, tokenObligatorio } from './api-listas';
+import { ordenarPromociones } from '@/utils/promociones';
 
 export class ErrorApi extends Error {
-  constructor(public codigo: string, mensaje: string) {
-    super(mensaje);
-    this.name = 'ErrorApi';
-  }
+  constructor(public codigo: string, mensaje: string) { super(mensaje); this.name = 'ErrorApi'; }
 }
 
-export async function listarPromociones(
-  modo: ModoDemo = 'normal',
-): Promise<RespuestaApi<Promocion[]>> {
-  await esperar(350);
-
-  if (modo === 'error') {
-    throw new ErrorApi('SIN_CONEXION', 'No pudimos actualizar las promociones.');
-  }
-  if (modo === 'vacio') {
-    return { datos: [], meta: { total: 0, pagina: 1, porPagina: 20 } };
-  }
-
-  const visibles = PROMOCIONES_MOCK.filter(
-    (promocion) => obtenerEstadoPromocion(promocion) !== 'vencida',
-  );
-
-  return {
-    datos: ordenarPromociones(visibles),
-    meta: { total: visibles.length, pagina: 1, porPagina: 20 },
-  };
+export async function listarPromociones(modo: ModoDemo = 'normal'): Promise<RespuestaApi<Promocion[]>> {
+  if (modo === 'error') throw new ErrorApi('SIN_CONEXION', 'No pudimos actualizar las promociones.');
+  if (modo === 'vacio') return { datos: [], meta: { total: 0, pagina: 1, porPagina: 20 } };
+  const [vigentes, proximas] = await Promise.all([
+    listarTodo<Promocion>('/promociones?estado=vigentes'),
+    listarTodo<Promocion>('/promociones?estado=proximas'),
+  ]);
+  const todas = ordenarPromociones([...new Map([...vigentes, ...proximas].map(p => [p.id, p])).values()]);
+  return { datos: todas, meta: { total: todas.length, pagina: 1, porPagina: todas.length } };
 }
 
 export async function obtenerPromocion(id: string): Promise<Promocion> {
-  await esperar(180);
-  const promocion = PROMOCIONES_MOCK.find((item) => item.id === id);
-
-  if (!promocion) {
-    throw new ErrorApi('PROMO_NO_ENCONTRADA', 'La promoción no existe.');
-  }
-  if (obtenerEstadoPromocion(promocion) === 'vencida') {
-    throw new ErrorApi('PROMO_VENCIDA', 'Esa promoción ya no está vigente.');
-  }
-  return promocion;
+  return (await solicitarApi<Promocion>(`/promociones/${encodeURIComponent(id)}`)).datos;
 }
 
 export async function listarRubros(): Promise<Rubro[]> {
-  await esperar(80);
-  return [...RUBROS_MOCK].sort((a, b) => a.orden - b.orden);
+  return (await listarTodo<Rubro>('/rubros')).sort((a,b) => a.orden - b.orden);
 }
 
 export async function listarComerciosResumen(): Promise<ComercioResumen[]> {
-  await esperar(80);
-  return COMERCIOS_MOCK;
+  const comercios = await listarTodo<Comercio>('/comercios');
+  return comercios.map(({id,nombre,rubroId,direccion}) => ({id,nombre,rubroId,direccion}));
 }
 
-export async function obtenerCodigoDeUso(
-  promocionId: string,
-  usuarioId: string,
-): Promise<UsoDePromocion> {
-  const promocion = await obtenerPromocion(promocionId);
-  if (!promocion.soloApp) {
-    throw new ErrorApi('PROMO_SIN_CODIGO', 'Esta promoción no necesita código.');
-  }
-
-  const partePromo = promocionId.replace(/\D/g, '').padStart(3, '0').slice(-3);
-  const parteUsuario = usuarioId.replace(/\D/g, '').padStart(3, '0').slice(-3);
-  const control = `${promocionId}-${usuarioId}`
-    .split('')
-    .reduce((total, caracter) => total + caracter.charCodeAt(0), 0)
-    .toString()
-    .padStart(4, '0')
-    .slice(-4);
-
-  return {
-    id: `uso-${promocionId}-${usuarioId}`,
-    promocionId,
-    usuarioId,
-    codigo: `CCU-${partePromo}-${parteUsuario}-${control}`,
-    validadoEn: null,
-  };
+export async function obtenerCodigoDeUso(promocionId: string, usuarioId: string): Promise<UsoDePromocion> {
+  const token = await tokenObligatorio();
+  void usuarioId;
+  return (await solicitarApi<UsoDePromocion>(`/promociones/${encodeURIComponent(promocionId)}/usos`, json('POST'), token)).datos;
 }
 
-export async function obtenerPromocionesVigentesPorComercio(
-  comercioId: string,
-): Promise<Promocion[]> {
-  const ahora = Date.now();
-
-  return PROMOCIONES_MOCK.filter((promocion) => {
-    const desde = new Date(promocion.desde).getTime();
-    const hasta = new Date(promocion.hasta).getTime();
-
-    return (
-      promocion.comercioId === comercioId &&
-      promocion.activa &&
-      desde <= ahora &&
-      ahora <= hasta
-    );
-  });
+export async function obtenerPromocionesVigentesPorComercio(comercioId: string): Promise<Promocion[]> {
+  return listarTodo<Promocion>(`/promociones?estado=vigentes&comercioId=${encodeURIComponent(comercioId)}`);
 }

@@ -38,8 +38,8 @@ export default function RegistroScreen() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.');
+    if (password.length < 8 || password.length > 100) {
+      setError('La contraseña debe tener entre 8 y 100 caracteres.');
       return;
     }
 
@@ -49,15 +49,13 @@ export default function RegistroScreen() {
     }
 
     try {
-      const usuario = await registrar({
+      await registrar({
         nombre,
         email,
         password,
       });
 
-      console.log('Usuario registrado:', usuario);
-
-      router.replace('/login');
+      router.replace('/');
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);

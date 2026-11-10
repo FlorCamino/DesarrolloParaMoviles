@@ -1,7 +1,12 @@
 import Almacenamiento from 'expo-sqlite/kv-store';
 import { CachePromociones, PreferenciasPromociones } from '@/types/promociones';
 
-const CLAVE_PREFERENCIAS = 'promociones:preferencias:v1';
+const PREFIJO_PREFERENCIAS = 'promociones:preferencias:v2:';
+
+function clavePreferencias(usuarioId: string): string {
+  if (!usuarioId.trim()) throw new Error('Es necesario iniciar sesión.');
+  return `${PREFIJO_PREFERENCIAS}${encodeURIComponent(usuarioId)}`;
+}
 const CLAVE_CACHE = 'promociones:cache:v1';
 
 const PREFERENCIAS_INICIALES: PreferenciasPromociones = {
@@ -12,9 +17,10 @@ const PREFERENCIAS_INICIALES: PreferenciasPromociones = {
 };
 
 export async function leerPreferencias(
+  usuarioId: string,
   preferenciasDelUsuario: Partial<PreferenciasPromociones> = {},
 ): Promise<PreferenciasPromociones> {
-  const guardado = await Almacenamiento.getItem(CLAVE_PREFERENCIAS);
+  const guardado = await Almacenamiento.getItem(clavePreferencias(usuarioId));
   const iniciales = { ...PREFERENCIAS_INICIALES, ...preferenciasDelUsuario };
   if (!guardado) return iniciales;
 
@@ -26,9 +32,10 @@ export async function leerPreferencias(
 }
 
 export async function guardarPreferencias(
+  usuarioId: string,
   preferencias: PreferenciasPromociones,
 ): Promise<void> {
-  await Almacenamiento.setItem(CLAVE_PREFERENCIAS, JSON.stringify(preferencias));
+  await Almacenamiento.setItem(clavePreferencias(usuarioId), JSON.stringify(preferencias));
 }
 
 export async function guardarCachePromociones(cache: CachePromociones): Promise<void> {

@@ -1,5 +1,6 @@
 import { BiometricReentry } from '@/components/biometric-reentry';
 import { AuthProvider } from '@/contexts/auth-context';
+import { PromocionesProvider } from '@/contexts/promociones-context';
 import { useAuth } from '@/hooks/use-auth';
 import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -13,6 +14,7 @@ function AppNavigator() {
   const {
     initializing,
     sesionPendiente,
+    usuario,
   } = useAuth();
 
   return (
@@ -27,10 +29,23 @@ function AppNavigator() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="comercio/[id]" options={{ headerShown: true, title: "Ficha del comercio" }} />
+            <Stack.Protected guard={usuario?.rol === 'comercio' && Boolean(usuario.comercioId)}>
+              <Stack.Screen name="panel_socio" />
+            </Stack.Protected>
           </Stack>
         )
       )}
     </>
+  );
+}
+
+function AppWithPromociones() {
+  const { usuario } = useAuth();
+
+  return (
+    <PromocionesProvider key={usuario?.id ?? 'invitado'}>
+      <AppNavigator />
+    </PromocionesProvider>
   );
 }
 
@@ -43,7 +58,7 @@ export default function RootLayout() {
     >
       <StatusBar style="dark" />
       <AuthProvider>
-        <AppNavigator />
+        <AppWithPromociones />
       </AuthProvider>
     </ThemeProvider>
   );

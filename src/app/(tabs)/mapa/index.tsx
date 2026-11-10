@@ -50,18 +50,20 @@ export default function MapaScreen() {
     "Explorá los comercios de la ciudad.",
   );
   const [fechaDatos, setFechaDatos] = useState<string | null>(null);
-  const [ahora, setAhora] = useState(Date.now());
+  const [ahora, setAhora] = useState(0);
 
-  const datosDesactualizados = fechaDatos
+  const datosDesactualizados = fechaDatos && ahora > 0
     ? ahora - new Date(fechaDatos).getTime() > 24 * 60 * 60 * 1000
     : false;
 
   useEffect(() => {
-    const intervalo = setInterval(() => {
-      setAhora(Date.now());
-    }, 60 * 1000);
+    const inicial = setTimeout(() => setAhora(Date.now()), 0);
+    const intervalo = setInterval(() => setAhora(Date.now()), 60 * 1000);
 
-    return () => clearInterval(intervalo);
+    return () => {
+      clearTimeout(inicial);
+      clearInterval(intervalo);
+    };
   }, []);
 
   useEffect(() => {

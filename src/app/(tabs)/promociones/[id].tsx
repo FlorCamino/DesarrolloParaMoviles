@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
 import { EstadoPantalla } from '@/components/estado-pantalla';
 import { usePromociones } from '@/contexts/promociones-context';
@@ -48,9 +48,19 @@ export default function DetallePromocionScreen() {
   const estado = obtenerEstadoPromocion(promocion);
   const textoVencimiento = textoDiasHastaVencimiento(promocion);
 
+  function validarIngreso(): boolean {
+    if (usuario) return true;
+    Alert.alert('Iniciá sesión', 'Necesitás una cuenta para guardar favoritos y utilizar promociones.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Ingresar', onPress: () => router.push('/login') },
+    ]);
+    return false;
+  }
+
   async function mostrarCodigo() {
+    if (!validarIngreso() || !usuario) return;
     try {
-      setCodigo(await obtenerCodigoDeUso(promocion!.id, usuario?.id ?? 'usuario-sin-sesion'));
+      setCodigo(await obtenerCodigoDeUso(promocion!.id, usuario.id));
     } catch (e) {
       Alert.alert('No se pudo generar el código', e instanceof Error ? e.message : 'Intentá nuevamente.');
     }
@@ -77,11 +87,11 @@ export default function DetallePromocionScreen() {
         </View>
       </View>
 
-      <Pressable style={styles.botonPrimario} onPress={() => alternarPromocionGuardada(promocion)}>
+      <Pressable style={styles.botonPrimario} onPress={() => { if (validarIngreso()) void alternarPromocionGuardada(promocion); }}>
         <Text style={styles.textoPrimario}>{guardada ? '★ Quitar de guardadas' : '☆ Guardar promoción'}</Text>
       </Pressable>
 
-      <Pressable style={styles.botonSecundario} onPress={() => alternarComercioFavorito(promocion.comercioId)}>
+      <Pressable style={styles.botonSecundario} onPress={() => { if (validarIngreso()) void alternarComercioFavorito(promocion.comercioId); }}>
         <Text style={styles.textoSecundario}>{favorito ? 'Quitar comercio de favoritos' : 'Marcar comercio favorito'}</Text>
       </Pressable>
 
