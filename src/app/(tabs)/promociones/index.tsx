@@ -1,5 +1,6 @@
+import { useAvisoLogin } from '@/contexts/aviso-login-context';
 import { useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { BannerConexion } from '@/components/banner-conexion';
@@ -21,12 +22,10 @@ const filtros: { id: FiltroEstado; texto: string }[] = [
 export default function PromocionesScreen() {
   const router = useRouter();
   const { usuario } = useAuth();
+  const pedirLogin = useAvisoLogin();
   function exigirLogin(): boolean {
     if (usuario) return true;
-    Alert.alert('Iniciá sesión', 'Necesitás una cuenta para guardar promociones.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Ingresar', onPress: () => router.push('/login') },
-    ]);
+    pedirLogin('Necesitás una cuenta para guardar promociones.');
     return false;
   }
   const {

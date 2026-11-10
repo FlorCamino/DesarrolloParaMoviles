@@ -1,4 +1,5 @@
-import { Alert, FlatList, StyleSheet } from 'react-native';
+import { useAvisoLogin } from '@/contexts/aviso-login-context';
+import { FlatList, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { EstadoPantalla } from '@/components/estado-pantalla';
 import { TarjetaPromocion } from '@/components/tarjeta-promocion';
@@ -8,6 +9,7 @@ import { useAuth } from '@/hooks/use-auth';
 export default function PromocionesGuardadasScreen() {
   const router = useRouter();
   const { usuario } = useAuth();
+  const pedirLogin = useAvisoLogin();
   const { promociones, comercios, preferencias, alternarPromocionGuardada } = usePromociones();
   const guardadas = usuario ? promociones.filter((item) => preferencias.promocionesGuardadas.includes(item.id)) : [];
 
@@ -23,7 +25,7 @@ export default function PromocionesGuardadasScreen() {
           comercio={comercios.find((comercio) => comercio.id === item.comercioId)}
           guardada
           onAbrir={() => router.push({ pathname: '/(tabs)/promociones/[id]', params: { id: item.id } })}
-          onGuardar={() => { if (usuario) void alternarPromocionGuardada(item); else Alert.alert("Iniciá sesión", "Necesitás una cuenta para guardar promociones."); }}
+          onGuardar={() => { if (usuario) void alternarPromocionGuardada(item); else pedirLogin("Necesitás una cuenta para guardar promociones."); }}
         />
       )}
       ListEmptyComponent={

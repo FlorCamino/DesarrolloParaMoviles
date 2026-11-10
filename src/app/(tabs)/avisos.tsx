@@ -1,19 +1,17 @@
+import { useAvisoLogin } from '@/contexts/aviso-login-context';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChipFiltro } from '@/components/chip-filtro';
 import { usePromociones } from '@/contexts/promociones-context';
 import { avisosRequierenBuildDesarrollo } from '@/services/notificaciones';
 import { useAuth } from '@/hooks/use-auth';
-import { router } from 'expo-router';
 
 export default function PreferenciasScreen() {
   const { usuario } = useAuth();
+  const pedirLogin = useAvisoLogin();
   function permitirCambio(): boolean {
     if (usuario) return true;
-    Alert.alert("Iniciá sesión", "Necesitás una cuenta para configurar tus avisos y favoritos.", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Ingresar", onPress: () => router.push("/login") },
-    ]);
+    pedirLogin("Necesitás una cuenta para configurar tus avisos y favoritos.");
     return false;
   }
   const {
