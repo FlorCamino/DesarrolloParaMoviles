@@ -21,7 +21,7 @@ export function AvisoLoginProvider({ children }: PropsWithChildren) {
           <Pressable style={StyleSheet.absoluteFill} onPress={cerrar} accessible={false} />
           <View style={styles.tarjeta} accessibilityViewIsModal>
             <ScrollView contentContainerStyle={styles.contenido} bounces={false}>
-              <Image source={require('@/assets/images/logo-directorio-comercios.png')} style={styles.logo} accessible={false} />
+              <Image source={require('@/assets/images/icon.png')} style={styles.logo} accessible={false} />
               <Text style={styles.titulo} accessibilityRole="header">Iniciá sesión</Text>
               <Text style={styles.mensaje}>{mensaje}</Text>
               <Pressable accessibilityRole="button" onPress={ingresar} style={({ pressed }) => [styles.boton, styles.primario, pressed && styles.presionado]}>
