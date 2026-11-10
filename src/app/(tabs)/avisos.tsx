@@ -3,14 +3,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChipFiltro } from '@/components/chip-filtro';
 import { usePromociones } from '@/contexts/promociones-context';
 import { avisosRequierenBuildDesarrollo } from '@/services/notificaciones';
+import { useAuth } from '@/hooks/use-auth';
+import { router } from 'expo-router';
 
 export default function PreferenciasScreen() {
+  const { usuario } = useAuth();
+  function permitirCambio(): boolean {
+    if (usuario) return true;
+    Alert.alert("Iniciá sesión", "Necesitás una cuenta para configurar tus avisos y favoritos.", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Ingresar", onPress: () => router.push("/login") },
+    ]);
+    return false;
+  }
   const {
     rubros, comercios, preferencias,
     alternarRubroInteres, alternarComercioFavorito, cambiarAvisosActivos,
   } = usePromociones();
 
   async function cambiarAvisos(valor: boolean) {
+    if (!permitirCambio()) return;
     const aplicado = await cambiarAvisosActivos(valor);
     if (valor && !aplicado) {
       if (avisosRequierenBuildDesarrollo()) {
@@ -59,7 +71,7 @@ export default function PreferenciasScreen() {
               key={rubro.id}
               texto={rubro.nombre}
               seleccionado={preferencias.rubrosDeInteres.includes(rubro.id)}
-              onPress={() => alternarRubroInteres(rubro.id)}
+              onPress={() => { if (permitirCambio()) void alternarRubroInteres(rubro.id); }}
             />
           ))}
         </View>
@@ -74,7 +86,7 @@ export default function PreferenciasScreen() {
               <Text style={styles.nombreComercio}>{comercio.nombre}</Text>
               <Text style={styles.direccion}>{comercio.direccion}</Text>
             </View>
-            <Pressable onPress={() => alternarComercioFavorito(comercio.id)}>
+            <Pressable onPress={() => { if (permitirCambio()) void alternarComercioFavorito(comercio.id); }}>
               <Text style={styles.quitar}>Quitar</Text>
             </Pressable>
           </View>

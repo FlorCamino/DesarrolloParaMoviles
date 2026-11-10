@@ -21,8 +21,6 @@ export const COMERCIOS_MOCK: ComercioResumen[] = [
   { id: 'com-522', nombre: 'Tecno Centro', rubroId: 'rub-tecnologia', direccion: 'Rocamora 740' },
 ];
 
-// Las fechas son relativas para que siempre existan casos vigentes, próximos,
-// por vencer y vencidos durante la demostración del proyecto.
 export const PROMOCIONES_MOCK: Promocion[] = [
   {
     id: 'pro-441', comercioId: 'com-118', titulo: '15% en pinturas',

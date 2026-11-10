@@ -2,6 +2,10 @@ import { PropsWithChildren, createContext, useContext, useEffect, useState } fro
 import * as Haptics from 'expo-haptics';
 import * as Network from 'expo-network';
 import { useAuth } from '@/hooks/use-auth';
+import { solicitarApi } from '@/services/api';
+import { json, tokenObligatorio } from '@/services/api-listas';
+import type { Usuario } from '@/types/usuario';
+import { requiereSesion } from '@/utils/permisos';
 import {
   CachePromociones,
   ComercioResumen,
@@ -72,24 +76,42 @@ export function PromocionesProvider({ children }: PropsWithChildren) {
     setError(null);
 
     try {
-      const [preferenciasLocales, rubrosDisponibles, comerciosDisponibles, red] =
-        await Promise.all([
-          leerPreferencias({
-            comerciosFavoritos: usuario?.favoritos ?? [],
-            rubrosDeInteres: usuario?.rubrosDeInteres ?? [],
-            avisosActivos: usuario?.avisosActivos ?? false,
-          }),
-          listarRubros(),
-          listarComerciosResumen(),
-          Network.getNetworkStateAsync(),
-        ]);
-
-      setPreferencias(preferenciasLocales);
-      setRubros(rubrosDisponibles);
-      setComercios(comerciosDisponibles);
-
+      const red = await Network.getNetworkStateAsync();
       const desconectado = red.isConnected === false || red.isInternetReachable === false;
       setSinConexion(desconectado);
+      let preferenciasLocales = usuario
+        ? await leerPreferencias(usuario.id, {
+            comerciosFavoritos: usuario.favoritos ?? [],
+            rubrosDeInteres: usuario.rubrosDeInteres ?? [],
+            avisosActivos: usuario.avisosActivos ?? false,
+          })
+        : preferenciasVacias;
+
+      if (usuario && !desconectado) {
+        try {
+          const remoto = (await solicitarApi<Usuario>('/yo', {}, await tokenObligatorio())).datos;
+          preferenciasLocales = {
+            ...preferenciasLocales,
+            comerciosFavoritos: remoto.favoritos,
+            rubrosDeInteres: remoto.rubrosDeInteres,
+            avisosActivos: remoto.avisosActivos,
+          };
+          await guardarPreferencias(usuario.id, preferenciasLocales);
+        } catch (e) {
+          if (__DEV__) console.warn('No se pudo actualizar la cuenta:', e);
+        }
+      }
+      setPreferencias(preferenciasLocales);
+
+      let comerciosActualizados: ComercioResumen[] = [];
+      if (!desconectado) {
+        const [rubrosDisponibles, comerciosDisponibles] = await Promise.all([
+          listarRubros(), listarComerciosResumen(),
+        ]);
+        setRubros(rubrosDisponibles);
+        setComercios(comerciosDisponibles);
+        comerciosActualizados = comerciosDisponibles;
+      }
 
       if (desconectado) {
         const cache = await leerCachePromociones();
@@ -110,9 +132,8 @@ export function PromocionesProvider({ children }: PropsWithChildren) {
       setActualizadoEn(cache.actualizadoEn);
       setOrigenCache(false);
       await guardarCachePromociones(cache);
-      await avisarPromocionesNuevasRelevantes(respuesta.datos, preferenciasLocales);
+      if (usuario) await avisarPromocionesNuevasRelevantes(respuesta.datos, preferenciasLocales, comerciosActualizados);
     } catch (e) {
-      // Los modos de prueba deben exhibir el error, no esconderlo con la caché.
       if (modo !== 'normal') {
         setPromociones([]);
         setError(e instanceof Error ? e.message : 'Ocurrió un error inesperado.');
@@ -134,18 +155,23 @@ export function PromocionesProvider({ children }: PropsWithChildren) {
   }
 
   useEffect(() => {
-    const temporizador = setTimeout(() => void cargar(), 0);
+    const temporizador = setTimeout(() => {
+      setPreferencias(preferenciasVacias);
+      setPromociones([]);
+      void cargar();
+    }, 0);
     return () => clearTimeout(temporizador);
-    // cargar depende de todo el estado del módulo; aquí sólo reiniciamos al cambiar de usuario.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuario?.id]);
 
   async function persistir(nuevas: PreferenciasPromociones) {
+    const actual = requiereSesion(usuario);
+    await guardarPreferencias(actual.id, nuevas);
     setPreferencias(nuevas);
-    await guardarPreferencias(nuevas);
   }
 
   async function alternarPromocionGuardada(promocion: Promocion) {
+    requiereSesion(usuario);
     const yaGuardada = preferencias.promocionesGuardadas.includes(promocion.id);
     const promocionesGuardadas = yaGuardada
       ? preferencias.promocionesGuardadas.filter((id) => id !== promocion.id)
@@ -162,23 +188,35 @@ export function PromocionesProvider({ children }: PropsWithChildren) {
   }
 
   async function alternarComercioFavorito(comercioId: string) {
+    requiereSesion(usuario);
     const existe = preferencias.comerciosFavoritos.includes(comercioId);
     const comerciosFavoritos = existe
       ? preferencias.comerciosFavoritos.filter((id) => id !== comercioId)
       : [...preferencias.comerciosFavoritos, comercioId];
-    await persistir({ ...preferencias, comerciosFavoritos });
+    const token = await tokenObligatorio();
+    const ruta = `/yo/favoritos/${encodeURIComponent(comercioId)}`;
+    if (existe) {
+      await solicitarApi<void>(ruta, json('DELETE'), token);
+      await persistir({ ...preferencias, comerciosFavoritos });
+    } else {
+      const { datos: actualizado } = await solicitarApi<Usuario>(ruta, json('PUT'), token);
+      await persistir({ ...preferencias, comerciosFavoritos: actualizado.favoritos });
+    }
     await Haptics.selectionAsync();
   }
 
   async function alternarRubroInteres(rubroId: string) {
+    requiereSesion(usuario);
     const existe = preferencias.rubrosDeInteres.includes(rubroId);
     const rubrosDeInteres = existe
       ? preferencias.rubrosDeInteres.filter((id) => id !== rubroId)
       : [...preferencias.rubrosDeInteres, rubroId];
-    await persistir({ ...preferencias, rubrosDeInteres });
+    const actualizado = (await solicitarApi<Usuario>('/yo', json('PATCH', { rubrosDeInteres }), await tokenObligatorio())).datos;
+    await persistir({ ...preferencias, rubrosDeInteres: actualizado.rubrosDeInteres });
   }
 
   async function cambiarAvisosActivos(activo: boolean): Promise<boolean> {
+    requiereSesion(usuario);
     if (activo) {
       const permitido = await prepararNotificaciones();
       if (!permitido) return false;
@@ -186,7 +224,8 @@ export function PromocionesProvider({ children }: PropsWithChildren) {
       await cancelarAvisosDelModulo();
     }
 
-    await persistir({ ...preferencias, avisosActivos: activo });
+    const actualizado = (await solicitarApi<Usuario>('/yo', json('PATCH', { avisosActivos: activo }), await tokenObligatorio())).datos;
+    await persistir({ ...preferencias, avisosActivos: actualizado.avisosActivos });
     return true;
   }
 

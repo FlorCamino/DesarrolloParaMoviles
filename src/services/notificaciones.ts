@@ -1,8 +1,7 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import Almacenamiento from 'expo-sqlite/kv-store';
-import { PreferenciasPromociones, Promocion } from '@/types/promociones';
-import { COMERCIOS_MOCK } from '@/mocks/promociones';
+import { ComercioResumen, PreferenciasPromociones, Promocion } from '@/types/promociones';
 
 type ModuloNotificaciones = typeof import('expo-notifications');
 type DisparadorNotificacion = import('expo-notifications').NotificationTriggerInput;
@@ -69,8 +68,6 @@ export async function programarAvisoVencimiento(promocion: Promocion): Promise<v
     ? unDiaAntes
     : new Date(Date.now() + 10_000);
 
-  // En desarrollo se dispara a los 10 segundos para poder demostrarla en clase.
-  // En el APK release se agenda un día antes del vencimiento.
   const trigger: DisparadorNotificacion = __DEV__
     ? {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
@@ -123,22 +120,21 @@ export async function cancelarAvisosDelModulo(): Promise<void> {
 export async function avisarPromocionesNuevasRelevantes(
   promociones: Promocion[],
   preferencias: PreferenciasPromociones,
+  comercios: ComercioResumen[],
 ): Promise<void> {
   const anterior = await Almacenamiento.getItem(CLAVE_CONOCIDAS);
   const idsActuales = promociones.map((promocion) => promocion.id);
   await Almacenamiento.setItem(CLAVE_CONOCIDAS, JSON.stringify(idsActuales));
 
-  // La primera sincronización establece la base: no genera avisos viejos.
   if (!anterior || !preferencias.avisosActivos || Platform.OS === 'web') return;
 
   const idsConocidos = new Set<string>(JSON.parse(anterior));
   const nuevas = promociones.filter((promocion) => {
     if (idsConocidos.has(promocion.id)) return false;
-    const comercio = COMERCIOS_MOCK.find((item) => item.id === promocion.comercioId);
-    if (!comercio) return false;
+    const comercio = comercios.find((item) => item.id === promocion.comercioId);
     return (
-      preferencias.comerciosFavoritos.includes(comercio.id) ||
-      preferencias.rubrosDeInteres.includes(comercio.rubroId)
+      preferencias.comerciosFavoritos.includes(promocion.comercioId) ||
+      Boolean(comercio && preferencias.rubrosDeInteres.includes(comercio.rubroId))
     );
   });
 

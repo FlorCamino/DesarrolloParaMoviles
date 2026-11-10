@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { BannerConexion } from '@/components/banner-conexion';
@@ -7,6 +7,7 @@ import { ChipFiltro } from '@/components/chip-filtro';
 import { EstadoPantalla } from '@/components/estado-pantalla';
 import { TarjetaPromocion } from '@/components/tarjeta-promocion';
 import { usePromociones } from '@/contexts/promociones-context';
+import { useAuth } from '@/hooks/use-auth';
 import { FiltroEstado, ModoDemo } from '@/types/promociones';
 import { promocionCoincideConFiltro } from '@/utils/promociones';
 
@@ -19,6 +20,15 @@ const filtros: { id: FiltroEstado; texto: string }[] = [
 
 export default function PromocionesScreen() {
   const router = useRouter();
+  const { usuario } = useAuth();
+  function exigirLogin(): boolean {
+    if (usuario) return true;
+    Alert.alert('Iniciá sesión', 'Necesitás una cuenta para guardar promociones.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Ingresar', onPress: () => router.push('/login') },
+    ]);
+    return false;
+  }
   const {
     promociones, rubros, comercios, preferencias, cargando, error,
     sinConexion, origenCache, actualizadoEn, cargar, alternarPromocionGuardada,
@@ -55,7 +65,7 @@ export default function PromocionesScreen() {
               </View>
               <Pressable
                 style={styles.botonGuardadas}
-                onPress={() => router.push('/(tabs)/promociones/guardadas')}
+                onPress={() => { if (exigirLogin()) router.push('/(tabs)/promociones/guardadas'); }}
               >
                 <Text style={styles.textoGuardadas}>★ Guardadas</Text>
               </Pressable>
@@ -110,7 +120,7 @@ export default function PromocionesScreen() {
             comercio={comercios.find((comercio) => comercio.id === item.comercioId)}
             guardada={preferencias.promocionesGuardadas.includes(item.id)}
             onAbrir={() => router.push({ pathname: '/(tabs)/promociones/[id]', params: { id: item.id } })}
-            onGuardar={() => alternarPromocionGuardada(item)}
+            onGuardar={() => { if (exigirLogin()) void alternarPromocionGuardada(item); }}
           />
         )}
         ListEmptyComponent={

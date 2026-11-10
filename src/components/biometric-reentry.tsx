@@ -35,9 +35,11 @@ export function BiometricReentry() {
           'No se pudo verificar tu identidad.'
         );
       }
-    } catch {
+    } catch (error) {
       setError(
-        'Ocurrió un error al verificar tu identidad.'
+        error instanceof Error
+          ? error.message
+          : 'Ocurrió un error al verificar tu identidad.'
       );
     } finally {
       setLoading(false);

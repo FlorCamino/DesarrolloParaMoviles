@@ -1,7 +1,8 @@
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   ScrollView,
@@ -14,7 +15,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { buscarComercios } from "@/services/businesses";
-import { alternarFavorito, obtenerFavoritos } from "@/services/favorites";
+import { usePromociones } from "@/contexts/promociones-context";
+import { useAuth } from "@/hooks/use-auth";
 import type { Comercio } from "@/types/business";
 
 type OpcionRubro = {
@@ -68,29 +70,11 @@ function estaAbiertoAhora(comercio: Comercio): boolean {
 }
 
 export default function HomeScreen() {
-  const [favoritos, setFavoritos] = useState<string[]>([]);
+  const { usuario } = useAuth();
+  const { preferencias, alternarComercioFavorito } = usePromociones();
+  const favoritos = usuario ? preferencias.comerciosFavoritos : [];
   const [soloFavoritos, setSoloFavoritos] = useState(false);
-  const [guardandoFavorito, setGuardandoFavorito] = useState<string | null>(
-    null,
-  );
-
-  useFocusEffect(useCallback(() => {
-    let vigente = true;
-
-    obtenerFavoritos()
-      .then((ids) => {
-        if (vigente) {
-          setFavoritos(ids);
-        }
-      })
-      .catch((error) => {
-        console.error("Error cargando favoritos:", error);
-      });
-
-    return () => {
-      vigente = false;
-    };
-  }, []));
+  const [guardandoFavorito, setGuardandoFavorito] = useState<string | null>(null);
   const [termino, setTermino] = useState("");
   const [rubroSeleccionado, setRubroSeleccionado] = useState<string | null>(
     null,
@@ -151,11 +135,17 @@ export default function HomeScreen() {
       return;
     }
 
+    if (!usuario) {
+      Alert.alert("Iniciá sesión", "Necesitás una cuenta para guardar comercios favoritos.", [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Ingresar", onPress: () => router.push("/login") },
+      ]);
+      return;
+    }
     setGuardandoFavorito(comercioId);
 
     try {
-      const actualizados = await alternarFavorito(comercioId);
-      setFavoritos(actualizados);
+      await alternarComercioFavorito(comercioId);
     } catch (error) {
       console.error("Error guardando favorito:", error);
     } finally {

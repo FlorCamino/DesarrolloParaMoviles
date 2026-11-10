@@ -43,7 +43,8 @@ export default function ValidarCodigoScreen() {
     }, []);
 
     useEffect(() => {
-      verificarIdentidad();
+      const inicio = setTimeout(() => void verificarIdentidad(), 0);
+      return () => clearTimeout(inicio);
     }, [verificarIdentidad]);
 
     async function validar(codigo: string) {
