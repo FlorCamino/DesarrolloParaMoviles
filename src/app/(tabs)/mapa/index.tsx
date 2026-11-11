@@ -49,6 +49,8 @@ export default function MapaScreen() {
   const [mensaje, setMensaje] = useState(
     "Explorá los comercios de la ciudad.",
   );
+  const [errorComercios, setErrorComercios] = useState(false);
+  const [intentoCarga, setIntentoCarga] = useState(0);
   const [fechaDatos, setFechaDatos] = useState<string | null>(null);
   const [ahora, setAhora] = useState(0);
 
@@ -73,7 +75,7 @@ export default function MapaScreen() {
 
         setHayInternet(
           estado.isConnected === true &&
-            estado.isInternetReachable !== false,
+          estado.isInternetReachable !== false,
         );
       } catch {
         setHayInternet(null);
@@ -85,7 +87,7 @@ export default function MapaScreen() {
     const suscripcion = Network.addNetworkStateListener((estado) => {
       setHayInternet(
         estado.isConnected === true &&
-          estado.isInternetReachable !== false,
+        estado.isInternetReachable !== false,
       );
     });
 
@@ -97,6 +99,7 @@ export default function MapaScreen() {
 
     async function cargarComercios() {
       try {
+        setErrorComercios(false);
         const datos = await obtenerComercios();
         const fecha = await obtenerFechaGuardado();
 
@@ -104,9 +107,13 @@ export default function MapaScreen() {
           setComercios(datos);
           setFechaDatos(fecha);
         }
-      } catch {
+      } catch (error) {
+        console.warn("No se pudieron cargar los comercios:", error);
+
         if (vigente) {
-          setMensaje("No pudimos cargar los comercios guardados.");
+          setComercios([]);
+          setFechaDatos(null);
+          setErrorComercios(true);
         }
       } finally {
         if (vigente) {
@@ -120,7 +127,7 @@ export default function MapaScreen() {
     return () => {
       vigente = false;
     };
-  }, []);
+  }, [intentoCarga]);
 
   async function obtenerUbicacion() {
     setBuscandoUbicacion(true);
@@ -233,14 +240,14 @@ export default function MapaScreen() {
       <Text style={styles.textoFecha}>
         {fechaDatos
           ? `Última actualización: ${new Date(
-              fechaDatos,
-            ).toLocaleString("es-AR", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}`
+            fechaDatos,
+          ).toLocaleString("es-AR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}`
           : "Fecha de actualización no disponible"}
       </Text>
 
@@ -257,14 +264,14 @@ export default function MapaScreen() {
             style={[
               styles.chipRubro,
               rubroSeleccionado === rubro.id &&
-                styles.chipRubroActivo,
+              styles.chipRubroActivo,
             ]}
           >
             <Text
               style={[
                 styles.textoChip,
                 rubroSeleccionado === rubro.id &&
-                  styles.textoChipActivo,
+                styles.textoChipActivo,
               ]}
             >
               {rubro.nombre}
@@ -302,6 +309,48 @@ export default function MapaScreen() {
               </Text>
             </View>
           )}
+          {!cargandoComercios && errorComercios && (
+            <View style={styles.estadoVacio}>
+              <Text style={styles.tituloEstadoVacio}>
+                No pudimos cargar los comercios
+              </Text>
+
+              <Text style={styles.textoEstadoVacio}>
+                Ocurrió un problema al consultar los datos guardados.
+              </Text>
+
+              <Pressable
+                style={styles.botonReintentar}
+                onPress={() => {
+                  setErrorComercios(false);
+                  setCargandoComercios(true);
+                  setIntentoCarga((anterior) => anterior + 1);
+                }}
+              >
+                <Text style={styles.textoBotonReintentar}>
+                  Reintentar
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
+          {!cargandoComercios &&
+            !errorComercios &&
+            comerciosFiltrados.length === 0 && (
+              <View style={styles.estadoVacio}>
+                <Text style={styles.iconoEstadoVacio}>⌖</Text>
+
+                <Text style={styles.tituloEstadoVacio}>
+                  No hay comercios para mostrar
+                </Text>
+
+                <Text style={styles.textoEstadoVacio}>
+                  {comercios.length === 0
+                    ? "Todavía no hay comercios guardados en el dispositivo."
+                    : "No encontramos comercios para esta categoría. Probá con otro rubro."}
+                </Text>
+              </View>
+            )}
         </View>
       </View>
 
@@ -597,5 +646,46 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 12,
     color: "#536582",
+  },
+  estadoVacio: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "#F3F6FC",
+    zIndex: 2,
+  },
+
+  iconoEstadoVacio: {
+    fontSize: 36,
+    color: "#2455B8",
+    marginBottom: 12,
+  },
+
+  tituloEstadoVacio: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#172E62",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  textoEstadoVacio: {
+    fontSize: 13,
+    color: "#536582",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  botonReintentar: {
+    marginTop: 16,
+    backgroundColor: "#2455B8",
+    paddingHorizontal: 24,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+
+  textoBotonReintentar: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 13,
   },
 });

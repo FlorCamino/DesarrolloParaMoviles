@@ -46,3 +46,5 @@ example
 # Windows
 desktop.ini
 /dist-android/
+
+.env

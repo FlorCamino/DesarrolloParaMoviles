@@ -14,13 +14,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BannerConexion } from "@/components/banner-conexion";
 import { usePromociones } from "@/contexts/promociones-context";
 import { useAuth } from "@/hooks/use-auth";
-import { obtenerComercioPorId } from "@/services/businesses";
+import { obtenerComercioPorIdConEstado } from "@/services/comercios";
+import { obtenerUriMultimedia } from "@/services/multimedia-comercios";
 import { obtenerPromocionesVigentesPorComercio } from "@/services/promociones";
 import { obtenerResenasPorComercio } from "@/services/reviews";
 import type { Comercio, Resena } from "@/types/business";
 import type { Promocion } from "@/types/promociones";
+import * as Network from "expo-network";
 
 import { ResenasSeccion } from "@/components/resenas-seccion";
 
@@ -60,8 +63,31 @@ function formatearFecha(fecha: string): string {
   });
 }
 
+
 function FotoGaleria({ uri }: { uri: string }) {
+  const [uriMostrar, setUriMostrar] = useState(uri);
   const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let vigente = true;
+
+    async function cargarImagen() {
+      setError(false);
+      setUriMostrar(uri);
+
+      const resultado = await obtenerUriMultimedia(uri, "imagen");
+
+      if (vigente) {
+        setUriMostrar(resultado);
+      }
+    }
+
+    void cargarImagen();
+
+    return () => {
+      vigente = false;
+    };
+  }, [uri]);
 
   if (error) {
     return (
@@ -73,7 +99,7 @@ function FotoGaleria({ uri }: { uri: string }) {
 
   return (
     <Image
-      source={{ uri }}
+      source={{ uri: uriMostrar }}
       style={styles.imagenGaleria}
       resizeMode="cover"
       onError={() => setError(true)}
@@ -81,10 +107,68 @@ function FotoGaleria({ uri }: { uri: string }) {
   );
 }
 
+
+
+
 function VideoPresentacion({ url }: { url: string }) {
-  const player = useVideoPlayer(url, (player) => {
+  const player = useVideoPlayer(null, (player) => {
     player.loop = false;
   });
+
+  const [error, setError] = useState(false);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    let vigente = true;
+
+    async function cargarVideo() {
+      setError(false);
+      setCargando(true);
+
+      try {
+        const resultado = await obtenerUriMultimedia(url, "video");
+
+        if (vigente) {
+          player.replace(resultado);
+          setCargando(false);
+        }
+      } catch (error) {
+        console.warn("No se pudo cargar el video:", error);
+
+        if (vigente) {
+          setError(true);
+          setCargando(false);
+        }
+      }
+    }
+
+    void cargarVideo();
+
+    return () => {
+      vigente = false;
+    };
+  }, [url, player]);
+
+  if (error) {
+    return (
+      <View style={styles.videoMensaje}>
+        <Text style={styles.textoSecundario}>
+          No se pudo cargar el video. Necesitás conexión a internet o tenerlo descargado previamente.
+        </Text>
+      </View>
+    );
+  }
+
+  if (cargando) {
+    return (
+      <View style={styles.videoMensaje}>
+        <ActivityIndicator size="small" color="#1E3A8A" />
+        <Text style={styles.textoSecundario}>
+          Cargando video...
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <VideoView
@@ -96,6 +180,8 @@ function VideoPresentacion({ url }: { url: string }) {
   );
 }
 
+
+
 export default function FichaComercioScreen() {
   const params = useLocalSearchParams<{ id: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -103,15 +189,23 @@ export default function FichaComercioScreen() {
   const [comercio, setComercio] = useState<Comercio | null>(null);
   const [cargando, setCargando] = useState(true);
   const [resenasMostrar, setResenasMostrar] = useState<Resena[]>([]);
+  const [errorResenas, setErrorResenas] = useState(false);
 
   const [promociones, setPromociones] = useState<Promocion[]>([]);
   const [cargandoPromociones, setCargandoPromociones] = useState(true);
+  const [errorPromociones, setErrorPromociones] = useState(false);
 
-  const { usuario } = useAuth();
+  const [origenCache, setOrigenCache] = useState(false);
+  const [actualizadoEn, setActualizadoEn] = useState<string | null>(null);
+  const [sinConexion, setSinConexion] = useState(false);
+  const [ahora, setAhora] = useState(Date.now());
+
+  const { usuario, sesion } = useAuth();
   const pedirLogin = useAvisoLogin();
   const { preferencias, alternarComercioFavorito } = usePromociones();
   const favorito = Boolean(usuario && id && preferencias.comerciosFavoritos.includes(id));
   const [guardandoFavorito, setGuardandoFavorito] = useState(false);
+
 
   useEffect(() => {
     let vigente = true;
@@ -120,20 +214,22 @@ export default function FichaComercioScreen() {
       setCargando(true);
 
       try {
-        const [resultado, resenas] = id
-          ? await Promise.all([obtenerComercioPorId(id), obtenerResenasPorComercio(id)])
-          : [null, []];
+        const resultado = id
+          ? await obtenerComercioPorIdConEstado(id)
+          : null;
 
         if (vigente) {
-          setComercio(resultado);
-          setResenasMostrar(resenas);
+          setComercio(resultado?.comercio ?? null);
+          setOrigenCache(resultado?.origen === "sqlite");
+          setActualizadoEn(resultado?.actualizadoEn ?? null);
         }
       } catch (error) {
         console.error("Error cargando comercio:", error);
 
         if (vigente) {
           setComercio(null);
-          setResenasMostrar([]);
+          setOrigenCache(false);
+          setActualizadoEn(null);
         }
       } finally {
         if (vigente) {
@@ -149,30 +245,67 @@ export default function FichaComercioScreen() {
     };
   }, [id]);
 
+
+  useEffect(() => {
+    let vigente = true;
+
+    async function cargarResenas() {
+      setErrorResenas(false);
+
+      if (!id) {
+        setResenasMostrar([]);
+        return;
+      }
+
+      try {
+        const resultado = await obtenerResenasPorComercio(id);
+
+        if (vigente) {
+          setResenasMostrar(resultado);
+        }
+      } catch (error) {
+        console.warn("No se pudieron cargar las reseñas:", error);
+
+        if (vigente) {
+          setResenasMostrar([]);
+          setErrorResenas(true);
+        }
+      }
+    }
+
+    void cargarResenas();
+
+    return () => {
+      vigente = false;
+    };
+  }, [id]);
+
+
   useEffect(() => {
     let vigente = true;
 
     async function cargarPromociones() {
       setCargandoPromociones(true);
+      setErrorPromociones(false);
+
+      if (!id) {
+        setPromociones([]);
+        setCargandoPromociones(false);
+        return;
+      }
 
       try {
-        if (!id) {
-          if (vigente) {
-            setPromociones([]);
-          }
-          return;
-        }
-
         const resultado = await obtenerPromocionesVigentesPorComercio(id);
 
         if (vigente) {
           setPromociones(resultado);
         }
       } catch (error) {
-        console.error("Error cargando promociones:", error);
+        console.warn("No se pudieron cargar las promociones:", error);
 
         if (vigente) {
           setPromociones([]);
+          setErrorPromociones(true);
         }
       } finally {
         if (vigente) {
@@ -188,6 +321,57 @@ export default function FichaComercioScreen() {
     };
   }, [id]);
 
+
+  useEffect(() => {
+    let vigente = true;
+
+    function actualizarEstadoConexion(
+      estado: Network.NetworkState,
+    ) {
+      if (!vigente) return;
+
+      const sinInternet =
+        estado.isConnected !== true ||
+        estado.isInternetReachable === false;
+
+      setSinConexion(sinInternet);
+    }
+
+    async function comprobarConexion() {
+      try {
+        const estado = await Network.getNetworkStateAsync();
+        actualizarEstadoConexion(estado);
+      } catch (error) {
+        console.warn("No se pudo comprobar la conexión:", error);
+
+        if (vigente) {
+          setSinConexion(true);
+        }
+      }
+    }
+
+    void comprobarConexion();
+
+    const suscripcion = Network.addNetworkStateListener(
+      actualizarEstadoConexion,
+    );
+
+    return () => {
+      vigente = false;
+      suscripcion.remove();
+    };
+  }, []);
+
+
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      setAhora(Date.now());
+    }, 60 * 1000);
+
+    return () => clearInterval(intervalo);
+  }, []);
+
+
   async function abrirEnlace(url: string | null | undefined) {
     if (!url) {
       return;
@@ -199,6 +383,18 @@ export default function FichaComercioScreen() {
       console.error("No se pudo abrir el enlace:", error);
     }
   }
+
+
+  function abrirRuta(modo: "walking" | "driving") {
+    if (!comercio) return;
+
+    const destino = `${comercio.coordenadas.latitud},${comercio.coordenadas.longitud}`;
+
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${destino}&travelmode=${modo}`;
+
+    void abrirEnlace(url);
+  }
+
 
   async function cambiarFavorito() {
     if (!comercio || guardandoFavorito) return;
@@ -218,19 +414,23 @@ export default function FichaComercioScreen() {
     }
   }
 
+
+
   async function recargarResenas() {
     if (!id) return;
+
+    setErrorResenas(false);
+
     try {
-      const [resultado, resenas] = await Promise.all([
-        obtenerComercioPorId(id),
-        obtenerResenasPorComercio(id),
-      ]);
-      setComercio(resultado);
-      setResenasMostrar(resenas);
+      const resultado = await obtenerResenasPorComercio(id);
+      setResenasMostrar(resultado);
     } catch (error) {
-      console.error('Error recargando reseñas', error);
+      console.warn("Error recargando reseñas:", error);
+      setErrorResenas(true);
     }
   }
+
+
 
   if (cargando) {
     return (
@@ -256,6 +456,10 @@ export default function FichaComercioScreen() {
   const horarios = [...comercio.horarios].sort((a, b) => a.dia - b.dia);
   const nombreRubro = NOMBRES_RUBROS[comercio.rubroId] ?? "Comercio";
 
+  const datosDesactualizados = actualizadoEn
+    ? ahora - new Date(actualizadoEn).getTime() > 24 * 60 * 60 * 1000
+    : false;
+
   const videoUrl = comercio.videoUrl;
 
   const whatsapp = comercio.whatsapp
@@ -264,8 +468,8 @@ export default function FichaComercioScreen() {
 
   const instagram = comercio.instagram
     ? `https://www.instagram.com/${comercio.instagram
-        .replace(/^@/, "")
-        .replace(/\//g, "")}/`
+      .replace(/^@/, "")
+      .replace(/\//g, "")}/`
     : null;
 
   return (
@@ -274,6 +478,13 @@ export default function FichaComercioScreen() {
         contentContainerStyle={styles.contenido}
         showsVerticalScrollIndicator={false}
       >
+        {origenCache && datosDesactualizados && (
+          <BannerConexion
+            sinConexion={sinConexion}
+            origenCache={origenCache}
+            actualizadoEn={actualizadoEn}
+          />
+        )}
         {comercio.imagenes && comercio.imagenes.length > 0 ? (
           <ScrollView
             horizontal
@@ -349,8 +560,15 @@ export default function FichaComercioScreen() {
         <View style={styles.tarjeta}>
           <Text style={styles.tituloSeccion}>Promociones vigentes</Text>
 
+
           {cargandoPromociones ? (
-            <Text style={styles.textoSecundario}>Buscando promociones...</Text>
+            <Text style={styles.textoSecundario}>
+              Buscando promociones...
+            </Text>
+          ) : errorPromociones ? (
+            <Text style={styles.textoSecundario}>
+              No se pudieron cargar las promociones. Necesitás conexión a internet para consultarlas.
+            </Text>
           ) : promociones.length > 0 ? (
             promociones.map((promocion) => (
               <View key={promocion.id} style={styles.promocionItem}>
@@ -369,7 +587,6 @@ export default function FichaComercioScreen() {
                 </View>
 
                 <Text style={styles.tituloPromocion}>{promocion.titulo}</Text>
-
                 <Text style={styles.descripcion}>{promocion.detalle}</Text>
 
                 <Text style={styles.fechaVencimiento}>
@@ -382,6 +599,7 @@ export default function FichaComercioScreen() {
               Este comercio no tiene promociones vigentes.
             </Text>
           )}
+
         </View>
 
         <View style={styles.tarjeta}>
@@ -427,17 +645,23 @@ export default function FichaComercioScreen() {
           )}
 
           <Pressable
-            onPress={() =>
-              abrirEnlace(
-                `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                  `${comercio.direccion}, Concepción del Uruguay, Entre Ríos`,
-                )}`,
-              )
-            }
+            onPress={() => abrirRuta("walking")}
+            style={styles.botonSecundario}
+            accessibilityRole="button"
+          >
+            <Text style={styles.textoBotonSecundario}>
+              Indicaciones caminando
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => abrirRuta("driving")}
             style={styles.botonPrincipal}
             accessibilityRole="button"
           >
-            <Text style={styles.textoBotonPrincipal}>Cómo llegar</Text>
+            <Text style={styles.textoBotonPrincipal}>
+              Indicaciones en auto
+            </Text>
           </Pressable>
         </View>
 
@@ -498,7 +722,17 @@ export default function FichaComercioScreen() {
             </Text>
           </View>
 
-          <ResenasSeccion comercioId={comercio.id} resenas={resenasMostrar} onCambio={recargarResenas}/>
+          {errorResenas && (
+            <Text style={styles.textoSecundario}>
+              No se pudieron cargar las reseñas. Necesitás conexión a internet para consultarlas.
+            </Text>
+          )}
+
+          <ResenasSeccion
+            comercioId={comercio.id}
+            resenas={resenasMostrar}
+            onCambio={recargarResenas}
+          />
 
         </View>
 
