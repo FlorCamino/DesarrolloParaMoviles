@@ -19,7 +19,7 @@ export function ResenasSeccion({
     resenas,
     onCambio
 }: Props) {
-    const {usuario} = useAuth();
+    const { usuario } = useAuth();
 
     const [editandoId, setEditandoId] = useState<string | null>(null);
     const [estrellas, setEstrellas] = useState(0);
@@ -33,8 +33,8 @@ export function ResenasSeccion({
 
     function pedirLogin(mensaje: string) {
         Alert.alert('Inicia sesión primero.', mensaje, [
-            {text: 'Cancelar', style: 'cancel'},
-            {text: 'Ingresar', onPress: () => router.push('/login')},
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Ingresar', onPress: () => router.push('/login') },
         ]);
     }
 
@@ -64,21 +64,48 @@ export function ResenasSeccion({
     async function guardar() {
         setError(null);
 
-        if (estrellas < 1) return setError('Elige cuántas estrellas le das.');
+        if (estrellas < 1) {
+            setError('Elige cuántas estrellas le das.');
+            return;
+        }
+
         const texto = comentario.trim();
-        if (texto === '') return setError('Escribe un comentario.');
+
+        if (texto === '') {
+            setError('Escribe un comentario.');
+            return;
+        }
 
         setGuardando(true);
+
         try {
             if (editandoId === 'nueva') {
                 await crearResena(comercioId, estrellas, texto);
             } else if (editandoId) {
                 await editarResena(editandoId, estrellas, texto);
             }
+
             setEditandoId(null);
             await onCambio();
         } catch (error) {
-            setError(error instanceof Error ? error.message : 'No se pudo guardar tu reseña.');
+            setError(
+                error instanceof Error
+                    ? error.message
+                    : 'No se pudo guardar tu reseña.'
+            );
+
+            if (editandoId === 'nueva') {
+                try {
+                    await onCambio();
+                    setEditandoId(null);
+                    setError(null);
+                } catch (errorActualizacion) {
+                    console.warn(
+                        'No se pudo actualizar la lista de reseñas:',
+                        errorActualizacion
+                    );
+                }
+            }
         } finally {
             setGuardando(false);
         }
@@ -86,14 +113,16 @@ export function ResenasSeccion({
 
     function confirmarBorrado(resena: Resena) {
         Alert.alert('Borrar reseña', '¿Quiere borrar su reseña? Esta acción no se puede deshacer.', [
-            {text: 'Cancelar', style: 'cancel'},
-            {text: 'Borrar', style: 'destructive', onPress: async () => {
-                try {
-                    await borrarResena(resena.id);
-                    await onCambio();
-                } catch (error) {
-                    Alert.alert('No se pudo borrar la reseña', error instanceof Error ? error.message : 'Intenta nuevamente');
-                }},
+            { text: 'Cancelar', style: 'cancel' },
+            {
+                text: 'Borrar', style: 'destructive', onPress: async () => {
+                    try {
+                        await borrarResena(resena.id);
+                        await onCambio();
+                    } catch (error) {
+                        Alert.alert('No se pudo borrar la reseña', error instanceof Error ? error.message : 'Intenta nuevamente');
+                    }
+                },
             },
         ]);
     }
@@ -104,14 +133,16 @@ export function ResenasSeccion({
             return;
         }
         Alert.alert('Reportar reseña', 'Se reportará la reseña como ofensiva para su revisión. Mientras tanto seguirá visible ¿Desea reportarla?', [
-            {text: 'Cancelar', style: 'cancel'},
-            {text: 'Reportar', style: 'destructive', onPress: async () => {
-                try {
-                    await reportarResena(resena.id);
-                    await onCambio();
-                } catch (error) {
-                    Alert.alert('No se puedo reportar la reseña', error instanceof Error ? error.message : 'Intenta nuevamente');
-                }},
+            { text: 'Cancelar', style: 'cancel' },
+            {
+                text: 'Reportar', style: 'destructive', onPress: async () => {
+                    try {
+                        await reportarResena(resena.id);
+                        await onCambio();
+                    } catch (error) {
+                        Alert.alert('No se puedo reportar la reseña', error instanceof Error ? error.message : 'Intenta nuevamente');
+                    }
+                },
             },
         ]);
     }
@@ -123,7 +154,7 @@ export function ResenasSeccion({
             error={error}
             guardando={guardando}
             textoGuardar={guardando ? 'Guardando...' : editandoId === 'nueva' ? 'Publicar' : 'Guardar'}
-            onCambiarEstrellas={setEstrellas}    
+            onCambiarEstrellas={setEstrellas}
             onCambiarComentario={setComentario}
             onGuardar={guardar}
             onCancelar={cancelar}
@@ -135,7 +166,7 @@ export function ResenasSeccion({
             {editandoId === 'nueva' ? (
                 formulario
             ) : puedeResenar ? (
-                <Pressable accessibilityRole="button" onPress={abrirNueva} style={({pressed}) => [styles.botonPrincipal, pressed && {opacity: 0.8}]}>
+                <Pressable accessibilityRole="button" onPress={abrirNueva} style={({ pressed }) => [styles.botonPrincipal, pressed && { opacity: 0.8 }]}>
                     <Text style={styles.botonPrincipalTexto}>Dejar mi reseña</Text>
                 </Pressable>
             ) : null}
@@ -144,7 +175,7 @@ export function ResenasSeccion({
                 <Text style={styles.vacio}>Todavía no hay reseñas.</Text>
             ) : (
                 resenas.map((resena) => (
-                    <ResenaTarjeta 
+                    <ResenaTarjeta
                         key={resena.id}
                         resena={resena}
                         esMia={usuario?.id === resena.usuarioId}

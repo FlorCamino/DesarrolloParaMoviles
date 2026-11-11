@@ -1,4 +1,5 @@
 import { BiometricReentry } from '@/components/biometric-reentry';
+import { SincronizadorResenas } from '@/components/sincronizador-resenas';
 import { AuthProvider } from '@/contexts/auth-context';
 import { PromocionesProvider } from '@/contexts/promociones-context';
 import { useAuth } from '@/hooks/use-auth';
@@ -58,6 +59,7 @@ export default function RootLayout() {
     >
       <StatusBar style="dark" />
       <AuthProvider>
+        <SincronizadorResenas />
         <AppWithPromociones />
       </AuthProvider>
     </ThemeProvider>

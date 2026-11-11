@@ -14,10 +14,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import {
+  calcularDistanciaKm,
+  formatearDistancia,
+} from "@/utils/distancias";
+
+import {
+  obtenerUbicacionReferencia,
+  type UbicacionReferencia,
+} from "@/utils/ubicacion";
+
 import { buscarComercios } from "@/services/businesses";
 import { usePromociones } from "@/contexts/promociones-context";
 import { useAuth } from "@/hooks/use-auth";
 import type { Comercio } from "@/types/business";
+import * as Network from "expo-network";
+import { obtenerFechaGuardado } from "@/services/baseDatos";
 
 type OpcionRubro = {
   id: string | null;
@@ -84,44 +96,152 @@ export default function HomeScreen() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(false);
   const [intento, setIntento] = useState(0);
+  const [ubicacion, setUbicacion] = useState<UbicacionReferencia | null>(null);
+  const [ubicacionReal, setUbicacionReal] = useState(false);
+  const [hayInternet, setHayInternet] = useState<boolean | null>(null);
+  const [fechaDatos, setFechaDatos] = useState<string | null>(null);
+  const [ahora, setAhora] = useState(0);
+
+  useEffect(() => {
+    const inicial = setTimeout(() => setAhora(Date.now()), 0);
+    const intervalo = setInterval(() => setAhora(Date.now()), 60 * 1000);
+
+    return () => {
+      clearTimeout(inicial);
+      clearInterval(intervalo);
+    };
+  }, []);
+
+  useEffect(() => {
+    async function comprobarConexion() {
+      try {
+        const estado = await Network.getNetworkStateAsync();
+
+        setHayInternet(
+          estado.isConnected === true &&
+          estado.isInternetReachable !== false,
+        );
+      } catch {
+        setHayInternet(null);
+      }
+    }
+
+    void comprobarConexion();
+
+    const suscripcion = Network.addNetworkStateListener((estado) => {
+      setHayInternet(
+        estado.isConnected === true &&
+        estado.isInternetReachable !== false,
+      );
+    });
+
+    return () => suscripcion.remove();
+  }, []);
 
   useEffect(() => {
     let vigente = true;
 
-    Promise.resolve().then(() => {
-      if (!vigente) return [];
+    async function cargarUbicacion() {
+      const resultado = await obtenerUbicacionReferencia();
+
+      if (vigente) {
+        setUbicacion(resultado.ubicacion);
+        setUbicacionReal(resultado.esReal);
+      }
+    }
+
+    void cargarUbicacion();
+
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let vigente = true;
+
+    async function cargarComercios() {
       setCargando(true);
       setError(false);
-      return buscarComercios(termino, rubroSeleccionado ?? undefined);
-    })
-      .then((resultado) => {
+
+      try {
+        const resultado = await buscarComercios(
+          termino,
+          rubroSeleccionado ?? undefined,
+        );
+
+        const fecha = await obtenerFechaGuardado();
+
         if (vigente) {
           setComercios(resultado);
+          setFechaDatos(fecha);
         }
-      })
-      .catch(() => {
+      } catch {
         if (vigente) {
           setComercios([]);
+          setFechaDatos(null);
           setError(true);
         }
-      })
-      .finally(() => {
+      } finally {
         if (vigente) {
           setCargando(false);
         }
-      });
+      }
+    }
+
+    void cargarComercios();
 
     return () => {
       vigente = false;
     };
   }, [termino, rubroSeleccionado, intento]);
 
-  const comerciosVisibles = comercios.filter((comercio) => {
-    const coincideAbiertos = !soloAbiertos || estaAbiertoAhora(comercio);
-    const coincideFavoritos = !soloFavoritos || favoritos.includes(comercio.id);
+  const datosDesactualizados =
+    fechaDatos && ahora > 0
+      ? ahora - new Date(fechaDatos).getTime() > 24 * 60 * 60 * 1000
+      : false;
 
-    return coincideAbiertos && coincideFavoritos;
-  });
+  function tieneCoordenadasValidas(comercio: Comercio): boolean {
+    const latitud = comercio.coordenadas?.latitud;
+    const longitud = comercio.coordenadas?.longitud;
+
+    return (
+      typeof latitud === "number" &&
+      typeof longitud === "number" &&
+      Number.isFinite(latitud) &&
+      Number.isFinite(longitud) &&
+      latitud >= -90 &&
+      latitud <= 90 &&
+      longitud >= -180 &&
+      longitud <= 180
+    );
+  }
+
+  const comerciosVisibles = [...comercios]
+    .filter((comercio) => {
+      const coincideAbiertos =
+        !soloAbiertos || estaAbiertoAhora(comercio);
+
+      const coincideFavoritos =
+        !soloFavoritos || favoritos.includes(comercio.id);
+
+      return coincideAbiertos && coincideFavoritos;
+    })
+    .sort((a, b) => {
+      if (!ubicacion) return 0;
+
+      const aValido = tieneCoordenadasValidas(a);
+      const bValido = tieneCoordenadasValidas(b);
+
+      if (aValido && !bValido) return -1;
+      if (!aValido && bValido) return 1;
+      if (!aValido && !bValido) return 0;
+
+      return (
+        calcularDistanciaKm(ubicacion, a) -
+        calcularDistanciaKm(ubicacion, b)
+      );
+    });
 
   function mostrarFicha(comercio: Comercio) {
     router.push({
@@ -293,6 +413,55 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
+        {hayInternet === false && comercios.length > 0 && (
+          <View
+            style={{
+              backgroundColor: "#FEF3C7",
+              borderColor: "#FDE68A",
+              borderWidth: 1,
+              borderRadius: 12,
+              padding: 12,
+              marginBottom: 14,
+            }}
+          >
+            <Text
+              style={{
+                color: "#92400E",
+                fontSize: 13,
+                fontWeight: "700",
+              }}
+            >
+              Sin conexión
+            </Text>
+
+            <Text
+              style={{
+                color: "#92400E",
+                fontSize: 12,
+                marginTop: 4,
+                lineHeight: 18,
+              }}
+            >
+              {datosDesactualizados
+                ? "Los datos guardados tienen más de 24 horas y podrían estar desactualizados."
+                : "Estás viendo los comercios guardados en el dispositivo."}
+            </Text>
+
+            {fechaDatos && (
+              <Text
+                style={{
+                  color: "#92400E",
+                  fontSize: 11,
+                  marginTop: 4,
+                }}
+              >
+                Última actualización:{" "}
+                {new Date(fechaDatos).toLocaleString("es-AR")}
+              </Text>
+            )}
+          </View>
+        )}
+
         {cargando ? (
           <View style={styles.centrado}>
             <ActivityIndicator size="large" color="#1E3A8A" />
@@ -390,6 +559,22 @@ export default function HomeScreen() {
                         {abierto ? "Abierto ahora" : "Cerrado"}
                       </Text>
                     </View>
+
+                    <Text
+                      style={{
+                        color: "#64748B",
+                        fontSize: 11,
+                        fontWeight: "600",
+                      }}
+                    >
+                      {ubicacion
+                        ? tieneCoordenadasValidas(item)
+                          ? `${ubicacionReal ? "" : "Desde el centro · "}${formatearDistancia(
+                            calcularDistanciaKm(ubicacion, item),
+                          )}`
+                          : "Distancia no disponible"
+                        : "Calculando..."}
+                    </Text>
 
                     <Text style={styles.puntuacion}>
                       ★ {item.puntaje > 0 ? item.puntaje.toFixed(1) : "—"}

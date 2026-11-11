@@ -40,4 +40,5 @@ export interface Resena {
   reportada: boolean;
   creadaEn: string;
   sincronizada: boolean;
+  estadoSincronizacion?: 'pendiente' | 'error';
 }

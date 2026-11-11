@@ -1,6 +1,18 @@
 import * as SQLite from "expo-sqlite";
 import type { Comercio } from "../types/business";
 
+export interface ResenaPendiente {
+  id_local: string;
+  comercio_id: string;
+  usuario_id: string;
+  estrellas: number;
+  comentario: string;
+  creada_en: string;
+  estado: string;
+  intentos: number;
+  ultimo_error: string | null;
+}
+
 let promesaBaseDatos: Promise<SQLite.SQLiteDatabase> | null = null;
 let operacionesPendientes: Promise<void> = Promise.resolve();
 
@@ -40,6 +52,19 @@ async function inicializarBaseDatos() {
       id TEXT PRIMARY KEY NOT NULL,
       datos TEXT NOT NULL,
       guardado_en TEXT NOT NULL
+    );
+  `);
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS resenas_pendientes (
+      id_local TEXT PRIMARY KEY NOT NULL,
+      comercio_id TEXT NOT NULL,
+      usuario_id TEXT NOT NULL,
+      estrellas INTEGER NOT NULL,
+      comentario TEXT NOT NULL,
+      creada_en TEXT NOT NULL,
+      estado TEXT NOT NULL DEFAULT 'pendiente',
+      intentos INTEGER NOT NULL DEFAULT 0,
+      ultimo_error TEXT
     );
   `);
 
@@ -92,5 +117,137 @@ export async function obtenerFechaGuardado(): Promise<string | null> {
     );
 
     return fila?.guardado_en ?? null;
+  });
+}
+
+export async function guardarResenaPendiente(
+  resena: Pick<
+    ResenaPendiente,
+    | "id_local"
+    | "comercio_id"
+    | "usuario_id"
+    | "estrellas"
+    | "comentario"
+    | "creada_en"
+  >,
+): Promise<void> {
+  return encolarOperacion(async () => {
+    const db = await obtenerBaseDatos();
+
+    const resultado = await db.runAsync(
+      `INSERT OR IGNORE INTO resenas_pendientes (
+        id_local,
+        comercio_id,
+        usuario_id,
+        estrellas,
+        comentario,
+        creada_en
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+      resena.id_local,
+      resena.comercio_id,
+      resena.usuario_id,
+      resena.estrellas,
+      resena.comentario,
+      resena.creada_en,
+    );
+
+    if (resultado.changes === 0) {
+      throw new Error("La reseña ya existe en la cola de pendientes.");
+    }
+  });
+}
+
+export async function actualizarResenaPendiente(
+  idLocal: string,
+  estrellas: number,
+  comentario: string,
+): Promise<void> {
+  return encolarOperacion(async () => {
+    const db = await obtenerBaseDatos();
+
+    const resultado = await db.runAsync(
+      `UPDATE resenas_pendientes
+       SET estrellas = ?,
+           comentario = ?,
+           estado = 'pendiente',
+           intentos = 0,
+           ultimo_error = NULL
+       WHERE id_local = ?`,
+      estrellas,
+      comentario,
+      idLocal,
+    );
+
+    if (resultado.changes === 0) {
+      throw new Error('No se encontró la reseña pendiente.');
+    }
+  });
+}
+
+export async function obtenerResenasPendientes(
+  usuarioId: string,
+): Promise<ResenaPendiente[]> {
+  return encolarOperacion(async () => {
+    const db = await obtenerBaseDatos();
+
+    return db.getAllAsync<ResenaPendiente>(
+      `SELECT *
+       FROM resenas_pendientes
+       WHERE usuario_id = ?
+       ORDER BY creada_en ASC`,
+      usuarioId,
+    );
+  });
+}
+
+export async function obtenerResenasParaSincronizar(
+  usuarioId: string,
+): Promise<ResenaPendiente[]> {
+  return encolarOperacion(async () => {
+    const db = await obtenerBaseDatos();
+
+    return db.getAllAsync<ResenaPendiente>(
+      `SELECT *
+       FROM resenas_pendientes
+       WHERE usuario_id = ?
+       AND estado = 'pendiente'
+       ORDER BY creada_en ASC`,
+      usuarioId,
+    );
+  });
+}
+
+export async function registrarErrorResenaPendiente(
+  idLocal: string,
+  mensaje: string,
+  estado: 'pendiente' | 'error',
+): Promise<void> {
+  return encolarOperacion(async () => {
+    const db = await obtenerBaseDatos();
+
+    await db.runAsync(
+      `UPDATE resenas_pendientes
+       SET intentos = intentos + 1,
+           ultimo_error = ?,
+           estado = ?
+       WHERE id_local = ?`,
+      mensaje,
+      estado,
+      idLocal,
+    );
+  });
+}
+
+export async function eliminarResenaPendiente(
+  idLocal: string,
+): Promise<void> {
+  return encolarOperacion(async () => {
+    const db = await obtenerBaseDatos();
+
+    await db.runAsync(
+      `DELETE FROM resenas_pendientes
+       WHERE id_local = ?`,
+      idLocal,
+    );
   });
 }
