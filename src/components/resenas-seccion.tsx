@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { useAvisoLogin } from '@/contexts/aviso-login-context';
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -20,6 +20,7 @@ export function ResenasSeccion({
     onCambio
 }: Props) {
     const { usuario } = useAuth();
+    const pedirLogin = useAvisoLogin();
 
     const [editandoId, setEditandoId] = useState<string | null>(null);
     const [estrellas, setEstrellas] = useState(0);
@@ -31,12 +32,6 @@ export function ResenasSeccion({
 
     const puedeResenar = usuario?.rol !== 'comercio' && !miResena;
 
-    function pedirLogin(mensaje: string) {
-        Alert.alert('Inicia sesión primero.', mensaje, [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Ingresar', onPress: () => router.push('/login') },
-        ]);
-    }
 
     function abrirNueva() {
         if (!usuario) {

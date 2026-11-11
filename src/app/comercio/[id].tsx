@@ -1,9 +1,9 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useAvisoLogin } from '@/contexts/aviso-login-context';
+import { useLocalSearchParams } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Linking,
   Pressable,
@@ -201,6 +201,7 @@ export default function FichaComercioScreen() {
   const [ahora, setAhora] = useState(Date.now());
 
   const { usuario, sesion } = useAuth();
+  const pedirLogin = useAvisoLogin();
   const { preferencias, alternarComercioFavorito } = usePromociones();
   const favorito = Boolean(usuario && id && preferencias.comerciosFavoritos.includes(id));
   const [guardandoFavorito, setGuardandoFavorito] = useState(false);
@@ -399,10 +400,7 @@ export default function FichaComercioScreen() {
     if (!comercio || guardandoFavorito) return;
 
     if (!usuario) {
-      Alert.alert("Iniciá sesión", "Necesitás una cuenta para guardar comercios favoritos.", [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Ingresar", onPress: () => router.push("/login") },
-      ]);
+      pedirLogin("Necesitás una cuenta para guardar comercios favoritos.");
       return;
     }
     setGuardandoFavorito(true);

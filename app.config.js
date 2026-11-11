@@ -1,4 +1,5 @@
-import "dotenv/config";
+
+import 'dotenv/config';
 
 export default ({ config }) => ({
   ...config,
@@ -11,4 +12,17 @@ export default ({ config }) => ({
       },
     },
   },
+  plugins: [
+    ...(config.plugins ?? []),
+    [
+      'expo-build-properties',
+      {
+        android: {
+          usesCleartextTraffic: /^http:\/\//i.test(
+            process.env.EXPO_PUBLIC_API_URL?.trim() ?? '',
+          ),
+        },
+      },
+    ],
+  ],
 });
