@@ -14,9 +14,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { obtenerComercioPorId } from "@/services/businesses";
 import { usePromociones } from "@/contexts/promociones-context";
 import { useAuth } from "@/hooks/use-auth";
+import { obtenerComercioPorId } from "@/services/businesses";
 import { obtenerPromocionesVigentesPorComercio } from "@/services/promociones";
 import { obtenerResenasPorComercio } from "@/services/reviews";
 import type { Comercio, Resena } from "@/types/business";
@@ -107,7 +107,9 @@ export default function FichaComercioScreen() {
 
   const { usuario } = useAuth();
   const { preferencias, alternarComercioFavorito } = usePromociones();
-  const favorito = Boolean(usuario && id && preferencias.comerciosFavoritos.includes(id));
+  const favorito = Boolean(
+    usuario && id && preferencias.comerciosFavoritos.includes(id),
+  );
   const [guardandoFavorito, setGuardandoFavorito] = useState(false);
 
   useEffect(() => {
@@ -117,16 +119,36 @@ export default function FichaComercioScreen() {
       setCargando(true);
 
       try {
-        const [resultado, resenas] = id
-          ? await Promise.all([obtenerComercioPorId(id), obtenerResenasPorComercio(id)])
-          : [null, []];
+        if (!id) {
+          if (vigente) {
+            setComercio(null);
+            setResenasMostrar([]);
+          }
+          return;
+        }
 
-        if (vigente) {
-          setComercio(resultado);
-          setResenasMostrar(resenas);
+        const [resultadoComercio, resultadoResenas] = await Promise.allSettled([
+          obtenerComercioPorId(id),
+          obtenerResenasPorComercio(id),
+        ]);
+
+        if (!vigente) return;
+
+        if (resultadoComercio.status === "fulfilled") {
+          setComercio(resultadoComercio.value);
+        } else {
+          console.error("Error cargando comercio:", resultadoComercio.reason);
+          setComercio(null);
+        }
+
+        if (resultadoResenas.status === "fulfilled") {
+          setResenasMostrar(resultadoResenas.value);
+        } else {
+          console.error("Error cargando reseñas:", resultadoResenas.reason);
+          setResenasMostrar([]);
         }
       } catch (error) {
-        console.error("Error cargando comercio:", error);
+        console.error("Error cargando ficha:", error);
 
         if (vigente) {
           setComercio(null);
@@ -201,10 +223,14 @@ export default function FichaComercioScreen() {
     if (!comercio || guardandoFavorito) return;
 
     if (!usuario) {
-      Alert.alert("Iniciá sesión", "Necesitás una cuenta para guardar comercios favoritos.", [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Ingresar", onPress: () => router.push("/login") },
-      ]);
+      Alert.alert(
+        "Iniciá sesión",
+        "Necesitás una cuenta para guardar comercios favoritos.",
+        [
+          { text: "Cancelar", style: "cancel" },
+          { text: "Ingresar", onPress: () => router.push("/login") },
+        ],
+      );
       return;
     }
     setGuardandoFavorito(true);
