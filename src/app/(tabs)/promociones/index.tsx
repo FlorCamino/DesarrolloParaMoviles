@@ -49,7 +49,6 @@ export default function PromocionesScreen() {
     alternarPromocionGuardada,
   } = usePromociones();
 
-  // Mantiene actualizada la referencia a cargar sin modificarla durante el render.
   const cargarRef = useRef(cargar);
 
   useEffect(() => {
@@ -194,7 +193,7 @@ export default function PromocionesScreen() {
             {__DEV__ && (
               <View style={styles.panelPruebas}>
                 <Text style={styles.pruebasTitulo}>
-                  Casos exigidos por la cátedra
+                  Simular estados de promociones
                 </Text>
 
                 <View style={styles.pruebasFila}>

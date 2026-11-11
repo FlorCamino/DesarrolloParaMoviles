@@ -179,7 +179,6 @@ export function PromocionesProvider({ children }: PropsWithChildren) {
             preferenciasLocales.avisosActivos,
           );
         } catch (errorNotificaciones) {
-          // Las notificaciones no deben impedir la carga de promociones.
           if (__DEV__) {
             console.warn(
               'No se pudieron sincronizar los avisos:',
@@ -265,7 +264,6 @@ export function PromocionesProvider({ children }: PropsWithChildren) {
         await programarAvisoVencimiento(actual.id, promocion);
       }
     } catch (errorNotificaciones) {
-      // La acción de guardar ya se completó.
       if (__DEV__) {
         console.warn(
           'No se pudo actualizar el aviso de la promoción:',
@@ -363,10 +361,8 @@ export function PromocionesProvider({ children }: PropsWithChildren) {
       avisosActivos: actualizado.avisosActivos,
     };
 
-    // Primero confirmamos y guardamos la preferencia.
     await persistir(nuevasPreferencias);
 
-    // Después sincronizamos las notificaciones de forma independiente.
     try {
       if (actualizado.avisosActivos) {
         await sincronizarAvisosVencimiento(
@@ -379,7 +375,6 @@ export function PromocionesProvider({ children }: PropsWithChildren) {
         await cancelarAvisosDelModulo(actual.id);
       }
     } catch (errorNotificaciones) {
-      // La preferencia ya fue guardada en la API y localmente.
       if (__DEV__) {
         console.warn(
           'No se pudieron actualizar los avisos programados:',

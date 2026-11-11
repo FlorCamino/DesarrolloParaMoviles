@@ -38,7 +38,6 @@ export default function PreferenciasScreen() {
     cambiarAvisosActivos,
   } = usePromociones();
 
-  // Activar o desactivar avisos con manejo de errores.
   async function cambiarAvisos(valor: boolean) {
     if (!permitirCambio()) return;
 
@@ -69,7 +68,6 @@ export default function PreferenciasScreen() {
     }
   }
 
-  // Actualizar rubros de interés con manejo de errores.
   async function cambiarRubro(rubroId: string) {
     try {
       await alternarRubroInteres(rubroId);
@@ -83,7 +81,6 @@ export default function PreferenciasScreen() {
     }
   }
 
-  // Actualizar comercios favoritos con manejo de errores.
   async function quitarFavorito(comercioId: string) {
     try {
       await alternarComercioFavorito(comercioId);
@@ -216,7 +213,6 @@ export default function PreferenciasScreen() {
           <Text style={styles.explicacionTexto}>
             Promociones guardadas, favoritos, rubros de interés,
             estado de avisos y la última lista consultada.
-            Se usa expo-sqlite/kv-store.
           </Text>
         </View>
       </ScrollView>

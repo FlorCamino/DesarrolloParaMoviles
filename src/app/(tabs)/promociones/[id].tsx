@@ -83,8 +83,6 @@ export default function DetallePromocionScreen() {
     );
   }
 
-  // Desde este punto sabemos que la promoción existe.
-  // Esta constante permite utilizarla dentro de funciones async.
   const promocionActual = promocion;
 
   const comercio = comercios.find(
