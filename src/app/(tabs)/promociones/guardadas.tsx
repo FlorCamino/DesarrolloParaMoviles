@@ -1,5 +1,6 @@
+
 import { useAvisoLogin } from '@/contexts/aviso-login-context';
-import { FlatList, StyleSheet } from 'react-native';
+import { Alert, FlatList, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { EstadoPantalla } from '@/components/estado-pantalla';
 import { TarjetaPromocion } from '@/components/tarjeta-promocion';
@@ -10,8 +11,31 @@ export default function PromocionesGuardadasScreen() {
   const router = useRouter();
   const { usuario } = useAuth();
   const pedirLogin = useAvisoLogin();
-  const { promociones, comercios, preferencias, alternarPromocionGuardada } = usePromociones();
-  const guardadas = usuario ? promociones.filter((item) => preferencias.promocionesGuardadas.includes(item.id)) : [];
+
+  const {
+    promociones,
+    comercios,
+    preferencias,
+    alternarPromocionGuardada,
+  } = usePromociones();
+
+  const guardadas = usuario
+    ? promociones.filter((item) =>
+        preferencias.promocionesGuardadas.includes(item.id)
+      )
+    : [];
+
+  async function quitarGuardada(promocion: (typeof promociones)[number]) {
+    try {
+      await alternarPromocionGuardada(promocion);
+    } catch (error) {
+      console.error('Error al quitar la promoción guardada:', error);
+      Alert.alert(
+        'No se pudo actualizar',
+        'Ocurrió un problema al quitar esta promoción de tus guardadas. Intentá nuevamente.'
+      );
+    }
+  }
 
   return (
     <FlatList
@@ -24,8 +48,19 @@ export default function PromocionesGuardadasScreen() {
           promocion={item}
           comercio={comercios.find((comercio) => comercio.id === item.comercioId)}
           guardada
-          onAbrir={() => router.push({ pathname: '/(tabs)/promociones/[id]', params: { id: item.id } })}
-          onGuardar={() => { if (usuario) void alternarPromocionGuardada(item); else pedirLogin("Necesitás una cuenta para guardar promociones."); }}
+          onAbrir={() =>
+            router.push({
+              pathname: '/(tabs)/promociones/[id]',
+              params: { id: item.id },
+            })
+          }
+          onGuardar={() => {
+            if (usuario) {
+              void quitarGuardada(item);
+            } else {
+              pedirLogin('Necesitás una cuenta para guardar promociones.');
+            }
+          }}
         />
       )}
       ListEmptyComponent={
