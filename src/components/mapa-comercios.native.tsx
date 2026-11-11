@@ -2,8 +2,9 @@ import {
   calcularDistanciaKm,
   formatearDistancia,
 } from "@/utils/distancias";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import MapView, {
   Marker,
   PROVIDER_GOOGLE,
@@ -120,6 +121,18 @@ export default function MapaComercios({
     return formatearDistancia(distancia);
   }
 
+  if (
+    Platform.OS === "android" &&
+    Constants.executionEnvironment !== ExecutionEnvironment.StoreClient &&
+    !Constants.expoConfig?.extra?.googleMapsAndroidConfigurado
+  ) {
+    return (
+      <View style={[styles.contenedor, styles.mapaNoDisponible]}>
+        <Text>El mapa no está disponible sin una clave de Google Maps.</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.contenedor}>
       <MapView
@@ -178,5 +191,10 @@ const styles = StyleSheet.create({
   },
   mapa: {
     flex: 1,
+  },
+  mapaNoDisponible: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
   },
 });

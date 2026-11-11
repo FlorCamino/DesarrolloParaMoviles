@@ -198,12 +198,14 @@ export default function FichaComercioScreen() {
   const [origenCache, setOrigenCache] = useState(false);
   const [actualizadoEn, setActualizadoEn] = useState<string | null>(null);
   const [sinConexion, setSinConexion] = useState(false);
-  const [ahora, setAhora] = useState(Date.now());
+  const [ahora, setAhora] = useState(() => Date.now());
 
-  const { usuario, sesion } = useAuth();
+  const { usuario } = useAuth();
   const pedirLogin = useAvisoLogin();
   const { preferencias, alternarComercioFavorito } = usePromociones();
-  const favorito = Boolean(usuario && id && preferencias.comerciosFavoritos.includes(id));
+  const favorito = Boolean(
+    usuario && id && preferencias.comerciosFavoritos.includes(id),
+  );
   const [guardandoFavorito, setGuardandoFavorito] = useState(false);
 
 
@@ -224,7 +226,7 @@ export default function FichaComercioScreen() {
           setActualizadoEn(resultado?.actualizadoEn ?? null);
         }
       } catch (error) {
-        console.error("Error cargando comercio:", error);
+        console.error("Error cargando ficha:", error);
 
         if (vigente) {
           setComercio(null);

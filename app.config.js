@@ -1,19 +1,20 @@
 
 import 'dotenv/config';
 
+const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY?.trim();
+
 export default ({ config }) => ({
   ...config,
-  android: {
-    ...config.android,
-    config: {
-      ...config.android?.config,
-      googleMaps: {
-        apiKey: process.env.GOOGLE_MAPS_API_KEY,
-      },
-    },
+  extra: {
+    ...config.extra,
+    googleMapsAndroidConfigurado: Boolean(googleMapsApiKey),
   },
   plugins: [
     ...(config.plugins ?? []),
+    [
+      'react-native-maps',
+      { androidGoogleMapsApiKey: googleMapsApiKey },
+    ],
     [
       'expo-build-properties',
       {

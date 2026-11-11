@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   ScrollView,
@@ -24,9 +25,9 @@ import {
   type UbicacionReferencia,
 } from "@/utils/ubicacion";
 
-import { buscarComercios } from "@/services/businesses";
 import { usePromociones } from "@/contexts/promociones-context";
 import { useAuth } from "@/hooks/use-auth";
+import { buscarComercios } from "@/services/businesses";
 import type { Comercio } from "@/types/business";
 import * as Network from "expo-network";
 import { obtenerFechaGuardado } from "@/services/baseDatos";
@@ -61,8 +62,7 @@ const NOMBRES_RUBROS: Record<string, string> = {
   "rub-otros": "Otros",
 };
 
-function estaAbiertoAhora(comercio: Comercio): boolean {
-  const ahora = new Date();
+function estaAbiertoAhora(comercio: Comercio, ahora: Date): boolean {
   const diaActual = ahora.getDay();
   const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
 
@@ -87,7 +87,9 @@ export default function HomeScreen() {
   const { preferencias, alternarComercioFavorito } = usePromociones();
   const favoritos = usuario ? preferencias.comerciosFavoritos : [];
   const [soloFavoritos, setSoloFavoritos] = useState(false);
-  const [guardandoFavorito, setGuardandoFavorito] = useState<string | null>(null);
+  const [guardandoFavorito, setGuardandoFavorito] = useState<string | null>(
+    null,
+  );
   const [termino, setTermino] = useState("");
   const [rubroSeleccionado, setRubroSeleccionado] = useState<string | null>(
     null,
@@ -101,16 +103,12 @@ export default function HomeScreen() {
   const [ubicacionReal, setUbicacionReal] = useState(false);
   const [hayInternet, setHayInternet] = useState<boolean | null>(null);
   const [fechaDatos, setFechaDatos] = useState<string | null>(null);
-  const [ahora, setAhora] = useState(0);
+  const [ahora, setAhora] = useState(() => new Date());
 
   useEffect(() => {
-    const inicial = setTimeout(() => setAhora(Date.now()), 0);
-    const intervalo = setInterval(() => setAhora(Date.now()), 60 * 1000);
+    const intervalo = setInterval(() => setAhora(new Date()), 60_000);
 
-    return () => {
-      clearTimeout(inicial);
-      clearInterval(intervalo);
-    };
+    return () => clearInterval(intervalo);
   }, []);
 
   useEffect(() => {
@@ -198,8 +196,8 @@ export default function HomeScreen() {
   }, [termino, rubroSeleccionado, intento]);
 
   const datosDesactualizados =
-    fechaDatos && ahora > 0
-      ? ahora - new Date(fechaDatos).getTime() > 24 * 60 * 60 * 1000
+    fechaDatos
+      ? ahora.getTime() - new Date(fechaDatos).getTime() > 24 * 60 * 60 * 1000
       : false;
 
   function tieneCoordenadasValidas(comercio: Comercio): boolean {
@@ -221,7 +219,7 @@ export default function HomeScreen() {
   const comerciosVisibles = [...comercios]
     .filter((comercio) => {
       const coincideAbiertos =
-        !soloAbiertos || estaAbiertoAhora(comercio);
+        !soloAbiertos || estaAbiertoAhora(comercio, ahora);
 
       const coincideFavoritos =
         !soloFavoritos || favoritos.includes(comercio.id);
@@ -260,12 +258,18 @@ export default function HomeScreen() {
       pedirLogin("Necesitás una cuenta para guardar comercios favoritos.");
       return;
     }
+
     setGuardandoFavorito(comercioId);
 
     try {
       await alternarComercioFavorito(comercioId);
     } catch (error) {
       console.error("Error guardando favorito:", error);
+
+      Alert.alert(
+        "No se pudo actualizar el favorito",
+        "Revisá tu conexión e intentá nuevamente.",
+      );
     } finally {
       setGuardandoFavorito(null);
     }
@@ -320,7 +324,6 @@ export default function HomeScreen() {
 
         <Text style={styles.tituloSeccion}>Explorá por rubro</Text>
 
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -334,10 +337,7 @@ export default function HomeScreen() {
               <Pressable
                 key={rubro.nombre}
                 onPress={() => setRubroSeleccionado(rubro.id)}
-                style={[
-                  styles.chip,
-                  seleccionado && styles.chipSeleccionado,
-                ]}
+                style={[styles.chip, seleccionado && styles.chipSeleccionado]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: seleccionado }}
               >
@@ -354,7 +354,6 @@ export default function HomeScreen() {
             );
           })}
         </ScrollView>
-
 
         <View style={styles.filaResultados}>
           <View style={styles.encabezadoResultados}>
@@ -493,96 +492,118 @@ export default function HomeScreen() {
               comerciosVisibles.length === 0 && styles.listaVacia,
             ]}
             renderItem={({ item }) => {
-              const abierto = estaAbiertoAhora(item);
+              const abierto = estaAbiertoAhora(item, ahora);
               const nombreRubro = NOMBRES_RUBROS[item.rubroId] ?? "Comercio";
 
               return (
-                <Pressable
-                  onPress={() => mostrarFicha(item)}
-                  style={({ pressed }) => [
-                    styles.tarjeta,
-                    pressed && styles.tarjetaPresionada,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Ver comercio ${item.nombre}`}
-                >
+                <View style={styles.tarjeta}>
                   <View style={styles.tarjetaCabecera}>
-                    <View style={styles.iconoComercio}>
-                      <Text style={styles.iconoTexto}>▦</Text>
-                    </View>
+                    <Pressable
+                      onPress={() => mostrarFicha(item)}
+                      style={({ pressed }) => [
+                        {
+                          flex: 1,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 12,
+                        },
+                        pressed && styles.tarjetaPresionada,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Ver comercio ${item.nombre}`}
+                    >
+                      <View style={styles.iconoComercio}>
+                        <Text style={styles.iconoTexto}>▦</Text>
+                      </View>
 
-                    <View style={styles.datosComercio}>
-                      <Text style={styles.nombreComercio}>{item.nombre}</Text>
+                      <View style={styles.datosComercio}>
+                        <Text style={styles.nombreComercio}>{item.nombre}</Text>
+                        <Text style={styles.rubroComercio}>{nombreRubro}</Text>
+                      </View>
 
-                      <Text style={styles.rubroComercio}>{nombreRubro}</Text>
-                    </View>
+                      <Text style={styles.flecha}>›</Text>
+                    </Pressable>
 
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={favoritos.includes(item.id) ? 'Quitar de favoritos' : 'Guardar favorito'}
+                      accessibilityLabel={
+                        favoritos.includes(item.id)
+                          ? "Quitar de favoritos"
+                          : "Guardar favorito"
+                      }
                       disabled={guardandoFavorito !== null}
-                      onPress={(event) => { event.stopPropagation(); void cambiarFavorito(item.id); }}
-                      style={{ padding: 12 }}>
-                      <Text style={styles.favorito}>{favoritos.includes(item.id) ? '★' : '☆'}</Text>
+                      onPress={() => void cambiarFavorito(item.id)}
+                      style={{ padding: 12 }}
+                    >
+                      <Text style={styles.favorito}>
+                        {favoritos.includes(item.id) ? "★" : "☆"}
+                      </Text>
                     </Pressable>
-                    <Text style={styles.flecha}>›</Text>
                   </View>
 
-                  <Text style={styles.descripcion} numberOfLines={2}>
-                    {item.descripcion}
-                  </Text>
+                  <Pressable
+                    onPress={() => mostrarFicha(item)}
+                    style={({ pressed }) =>
+                      pressed ? styles.tarjetaPresionada : undefined
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ver detalles de ${item.nombre}`}
+                  >
+                    <Text style={styles.descripcion} numberOfLines={2}>
+                      {item.descripcion}
+                    </Text>
 
-                  <View style={styles.separador} />
+                    <View style={styles.separador} />
 
-                  <View style={styles.pieTarjeta}>
-                    <View
-                      style={[
-                        styles.estado,
-                        abierto ? styles.estadoAbierto : styles.estadoCerrado,
-                      ]}
-                    >
+                    <View style={styles.pieTarjeta}>
                       <View
                         style={[
-                          styles.puntoEstado,
-                          abierto ? styles.puntoAbierto : styles.puntoCerrado,
-                        ]}
-                      />
-
-                      <Text
-                        style={[
-                          styles.textoEstado,
-                          abierto ? styles.textoAbierto : styles.textoCerrado,
+                          styles.estado,
+                          abierto ? styles.estadoAbierto : styles.estadoCerrado,
                         ]}
                       >
-                        {abierto ? "Abierto ahora" : "Cerrado"}
+                        <View
+                          style={[
+                            styles.puntoEstado,
+                            abierto ? styles.puntoAbierto : styles.puntoCerrado,
+                          ]}
+                        />
+
+                        <Text
+                          style={[
+                            styles.textoEstado,
+                            abierto ? styles.textoAbierto : styles.textoCerrado,
+                          ]}
+                        >
+                          {abierto ? "Abierto ahora" : "Cerrado"}
+                        </Text>
+                      </View>
+
+                      <Text style={styles.puntuacion}>
+                        ★ {item.puntaje > 0 ? item.puntaje.toFixed(1) : "—"}
+                        <Text style={styles.resenas}>
+                          {" "}
+                          ({item.cantidadResenas})
+                        </Text>
+                      </Text>
+                      <Text
+                        style={{
+                          color: "#64748B",
+                          fontSize: 11,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {ubicacion
+                          ? tieneCoordenadasValidas(item)
+                            ? `${ubicacionReal ? "" : "Desde el centro · "}${formatearDistancia(
+                              calcularDistanciaKm(ubicacion, item),
+                            )}`
+                            : "Distancia no disponible"
+                          : "Calculando..."}
                       </Text>
                     </View>
-
-                    <Text
-                      style={{
-                        color: "#64748B",
-                        fontSize: 11,
-                        fontWeight: "600",
-                      }}
-                    >
-                      {ubicacion
-                        ? tieneCoordenadasValidas(item)
-                          ? `${ubicacionReal ? "" : "Desde el centro · "}${formatearDistancia(
-                            calcularDistanciaKm(ubicacion, item),
-                          )}`
-                          : "Distancia no disponible"
-                        : "Calculando..."}
-                    </Text>
-
-                    <Text style={styles.puntuacion}>
-                      ★ {item.puntaje > 0 ? item.puntaje.toFixed(1) : "—"}
-                      <Text style={styles.resenas}>
-                        {" "}
-                        ({item.cantidadResenas})
-                      </Text>
-                    </Text>
-                  </View>
-                </Pressable>
+                  </Pressable>
+                </View>
               );
             }}
             ListEmptyComponent={

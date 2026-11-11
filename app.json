@@ -25,7 +25,7 @@
       "package": "com.equipo65.directoriocomercios"
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
