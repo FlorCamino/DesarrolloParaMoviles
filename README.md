@@ -1,56 +1,136 @@
-# Welcome to your Expo app 👋
+# Equipo 65 – Desarrollo para Móviles
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Universidad Nacional de Entre Ríos (UNER)**  
+**Trabajo Final Integrador**
 
-## Get started
+## 👥 Integrantes
 
-1. Install dependencies
+- Janet Casaretto
+- Damian Ottone
+- Micaela Zalazar
+- Franco Challiol
+- Florencia Camino
 
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
+# 🏪 Directorio de Comercios – Concepción del Uruguay
 
-   ```bash
-   npx expo start
-   ```
+Aplicación móvil desarrollada con **React Native y Expo** para facilitar la búsqueda y consulta de comercios de Concepción del Uruguay, Entre Ríos, Argentina.
 
-In the output, you'll find options to open the app in a
+Permite a los vecinos consultar información de establecimientos locales y a los comerciantes gestionar sus comercios, con funcionalidades diferenciadas según el tipo de usuario.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 📱 Funcionalidades principales
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- Autenticación de usuarios y persistencia segura de sesión.
+- Acceso biométrico en dispositivos compatibles.
+- Consulta y visualización del directorio de comercios.
+- Gestión de información para comerciantes.
+- Navegación diferenciada para vecinos y comerciantes.
+- Integración con una API REST.
 
-## Get a fresh project
+## 🛠️ Tecnologías utilizadas
 
-When you're ready, run:
+**Aplicación móvil**
+- React Native y Expo
+- TypeScript
+- Expo Router
+- Expo SecureStore
+- Expo Local Authentication
+- Expo SQLite
+
+**Backend (proporcionado por la cátedra)**
+- API REST
+- Docker
+
+## 🚀 Instalación y ejecución
+
+### Requisitos previos
+
+- Node.js y npm
+- Git
+- Docker Desktop
+- Android Studio (emulador) o dispositivo físico con Expo Go compatible
+
+### 1. Clonar el repositorio e instalar dependencias
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Configurar las variables de entorno
 
-### Other setup steps
+Crear un archivo llamado `.env` en la raíz del proyecto, al mismo nivel que `package.json`.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Este archivo contiene la configuración necesaria para conectar la aplicación móvil con el backend.
 
-## Learn more
+Ejemplo de configuración, utilizando `EXPO_PUBLIC_API_URL` como nombre de variable:
 
-To learn more about developing your project with Expo, look at the following resources:
+```dotenv
+EXPO_PUBLIC_API_URL=http://192.168.1.100:PUERTO
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+**Importante:** utilizar el nombre de variable definido en el código del proyecto y reemplazar la dirección y el puerto por los correspondientes al backend.
 
-## Join the community
+La dirección depende del entorno de ejecución:
 
-Join our community of developers creating universal apps.
+| Entorno | Dirección del backend |
+|---|---|
+| Emulador Android | `http://10.0.2.2:PUERTO` |
+| Dispositivo físico | `http://IP_LOCAL_PC:PUERTO` |
+| iOS Simulator (macOS) | `http://localhost:PUERTO` |
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Para un dispositivo físico, el teléfono y la computadora deben estar conectados a la misma red y el backend debe ser accesible desde ella.
+
+**Nota:** el archivo `.env` debe configurarse antes de iniciar Expo. Si se modifica, reiniciar el servidor de desarrollo.
+
+### 3. Iniciar el backend
+
+El backend es proporcionado por el equipo de cátedra y se ejecuta mediante Docker.
+
+Desde el directorio que contiene su archivo `compose.yaml` o `docker-compose.yml`, ejecutar:
+
+```bash
+docker compose up -d
+```
+
+Verificar que los contenedores estén activos:
+
+```bash
+docker ps
+```
+
+### 4. Iniciar la aplicación móvil
+
+Desde la raíz del proyecto:
+
+```bash
+npx expo start
+```
+
+Para ejecutarla directamente en un emulador Android:
+
+```bash
+npx expo start --android
+```
+
+Para utilizar un dispositivo físico, abrir Expo Go y escanear el código QR generado en la terminal.
+
+**Importante:** la versión de Expo Go debe ser compatible con el SDK de Expo utilizado por el proyecto.
+
+## 🧪 Verificación del proyecto
+
+Ejecutar los siguientes comandos para comprobar los tipos, analizar el código y correr las pruebas automatizadas:
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+```
+
+## 📚 Sobre el proyecto
+
+Desarrollado por el **Equipo 65** como Trabajo Final Integrador de la materia **Desarrollo para Móviles** de la **Universidad Nacional de Entre Ríos (UNER)**.
+
+El proyecto integra conceptos de desarrollo móvil, navegación, autenticación, almacenamiento seguro y consumo de servicios REST.
+
+**Proyecto de uso académico y educativo.**
