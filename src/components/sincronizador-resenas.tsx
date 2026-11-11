@@ -6,9 +6,10 @@ import { sincronizarResenasPendientes } from '@/services/reviews';
 
 export function SincronizadorResenas() {
     const { sesion, initializing } = useAuth();
+    const usuarioId = sesion?.usuario.id;
 
     useEffect(() => {
-        if (initializing || !sesion) {
+        if (initializing || usuarioId === undefined) {
             return;
         }
 
@@ -66,7 +67,7 @@ export function SincronizadorResenas() {
             vigente = false;
             suscripcion.remove();
         };
-    }, [initializing, sesion?.usuario.id]);
+    }, [initializing, usuarioId]);
 
     return null;
 }
