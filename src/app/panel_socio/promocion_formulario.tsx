@@ -84,7 +84,7 @@ async function guardar() {
     }
 
     const inicioNumero = Number(diasInicio);
-    if (!yaEmpezo && (!Number.isInteger(inicioNumero) || inicioNumero > 0 || inicioNumero > 365)) {
+    if (!yaEmpezo && (!Number.isInteger(inicioNumero) || inicioNumero < 0 || inicioNumero > 365)) {
         return setError('El inicio debe ser un número entero de días entre 0 y 365');
     }
 
