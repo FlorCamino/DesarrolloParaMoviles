@@ -149,10 +149,30 @@ export default function MiComercioScreen() {
             }
 
             const posicion = await Location.getCurrentPositionAsync({accuracy: Location.Accuracy.High});
+            const lat = posicion.coords.latitude;
+            const lon = posicion.coords.longitude;
+            
             setCoordenadas({
-                latitud: Number(posicion.coords.latitude.toFixed(6)),
-                longitud: Number(posicion.coords.longitude.toFixed(4)),
+                latitud: Number(lat.toFixed(6)),
+                longitud: Number(lon.toFixed(4)),
             });
+
+            const resultadosDireccion = await Location.reverseGeocodeAsync({
+                latitude: lat,
+                longitude: lon,
+            });
+
+            if (resultadosDireccion.length > 0) {
+                const d = resultadosDireccion[0];
+                const calleNumero = [d.street, d.streetNumber].filter(Boolean).join(' ');
+                const localidad = d.city || d.subregion || '';
+                const direccionArmada = [calleNumero, localidad].filter(Boolean).join(', ');
+
+                if (direccionArmada) {
+                    setDireccion(direccionArmada);
+                }
+            }
+
             setUbicacionNueva(true);
         } catch {
             setError('No se pudo obtener tu ubicación. Revisa que el GPS esté activado.');

@@ -84,7 +84,7 @@ async function guardar() {
     }
 
     const inicioNumero = Number(diasInicio);
-    if (!yaEmpezo && (!Number.isInteger(inicioNumero) || inicioNumero > 0 || inicioNumero > 365)) {
+    if (!yaEmpezo && (!Number.isInteger(inicioNumero) || inicioNumero < 0 || inicioNumero > 365)) {
         return setError('El inicio debe ser un número entero de días entre 0 y 365');
     }
 
@@ -130,10 +130,20 @@ const textoVentana = (() => {
     const i = Number(diasInicio);
     const d = Number(dias);
     if (yaEmpezo || !Number.isInteger(i) || !Number.isInteger(d) || i < 0 || d < 1) return null;
-    const hoy = new Date(ahoraVistaPrevia);
+    
+    const fechaBaseValida = ahoraVistaPrevia && !isNaN(new Date(ahoraVistaPrevia).getTime())
+        ? new Date(ahoraVistaPrevia)
+        : new Date();
+    
+    const hoy = new Date(fechaBaseValida);
     hoy.setHours(0, 0, 0, 0);
-    const inicio = new Date(i === 0 ? ahoraVistaPrevia : hoy.getTime() + i * DIA);
+    const inicio = new Date(i === 0 ? fechaBaseValida.getTime() : hoy.getTime() + i * DIA);
     const fin = new Date(inicio.getTime() + d * DIA - 60000);
+
+    if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+        return null;
+    }
+
     return `Empieza ${i === 0 ? 'hoy' : 'el ' + formatearFechaArgentina(inicio.toISOString())} y termina el ${formatearFechaArgentina(fin.toISOString())}.`;
 })();
 
