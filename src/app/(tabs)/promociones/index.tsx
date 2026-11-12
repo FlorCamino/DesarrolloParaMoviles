@@ -1,14 +1,24 @@
-import { useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { useAvisoLogin } from '@/contexts/aviso-login-context';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { BannerConexion } from '@/components/banner-conexion';
 import { ChipFiltro } from '@/components/chip-filtro';
 import { EstadoPantalla } from '@/components/estado-pantalla';
 import { TarjetaPromocion } from '@/components/tarjeta-promocion';
 import { usePromociones } from '@/contexts/promociones-context';
 import { useAuth } from '@/hooks/use-auth';
-import { FiltroEstado, ModoDemo } from '@/types/promociones';
+import type { FiltroEstado, ModoDemo } from '@/types/promociones';
 import { promocionCoincideConFiltro } from '@/utils/promociones';
 
 const filtros: { id: FiltroEstado; texto: string }[] = [
@@ -21,31 +31,87 @@ const filtros: { id: FiltroEstado; texto: string }[] = [
 export default function PromocionesScreen() {
   const router = useRouter();
   const { usuario } = useAuth();
-  function exigirLogin(): boolean {
-    if (usuario) return true;
-    Alert.alert('Iniciá sesión', 'Necesitás una cuenta para guardar promociones.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Ingresar', onPress: () => router.push('/login') },
-    ]);
-    return false;
-  }
+  const pedirLogin = useAvisoLogin();
+
+  const primeraCarga = useRef(true);
+
   const {
-    promociones, rubros, comercios, preferencias, cargando, error,
-    sinConexion, origenCache, actualizadoEn, cargar, alternarPromocionGuardada,
+    promociones,
+    rubros,
+    comercios,
+    preferencias,
+    cargando,
+    error,
+    sinConexion,
+    origenCache,
+    actualizadoEn,
+    cargar,
+    alternarPromocionGuardada,
   } = usePromociones();
+
+  const cargarRef = useRef(cargar);
+
+  useEffect(() => {
+    cargarRef.current = cargar;
+  }, [cargar]);
+
   const [filtro, setFiltro] = useState<FiltroEstado>('todas');
   const [rubroId, setRubroId] = useState<string>('todos');
 
+  function exigirLogin(): boolean {
+    if (usuario) return true;
+
+    pedirLogin('Necesitás una cuenta para guardar promociones.');
+    return false;
+  }
+
   const promocionesFiltradas = useMemo(
-    () => promociones.filter((promocion) => {
-      const comercio = comercios.find((item) => item.id === promocion.comercioId);
-      const coincideRubro = rubroId === 'todos' || comercio?.rubroId === rubroId;
-      return coincideRubro && promocionCoincideConFiltro(promocion, filtro);
-    }),
-    [promociones, comercios, filtro, rubroId],
+    () =>
+      promociones.filter((promocion) => {
+        const comercio = comercios.find(
+          (item) => item.id === promocion.comercioId
+        );
+
+        const coincideRubro =
+          rubroId === 'todos' || comercio?.rubroId === rubroId;
+
+        return (
+          coincideRubro &&
+          promocionCoincideConFiltro(promocion, filtro)
+        );
+      }),
+    [promociones, comercios, filtro, rubroId]
   );
 
-  const ejecutarCaso = (modo: ModoDemo) => cargar(modo);
+  const ejecutarCaso = (modo: ModoDemo) => {
+    void cargarRef.current(modo);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (primeraCarga.current) {
+        primeraCarga.current = false;
+        return;
+      }
+
+      void cargarRef.current('normal');
+    }, [])
+  );
+
+  async function guardarConAviso(
+    promocion: (typeof promociones)[number]
+  ) {
+    if (!exigirLogin()) return;
+
+    try {
+      await alternarPromocionGuardada(promocion);
+    } catch (e) {
+      Alert.alert(
+        'No se pudo actualizar',
+        e instanceof Error ? e.message : 'Intentá nuevamente.'
+      );
+    }
+  }
 
   return (
     <SafeAreaView style={styles.segura}>
@@ -54,18 +120,25 @@ export default function PromocionesScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.contenido}
         refreshing={cargando}
-        onRefresh={() => cargar('normal')}
+        onRefresh={() => void cargarRef.current('normal')}
         ListHeaderComponent={
           <>
             <View style={styles.encabezado}>
               <View style={styles.encabezadoTexto}>
                 <Text style={styles.sobretitulo}>COMERCIO CERCA</Text>
                 <Text style={styles.titulo}>Promociones</Text>
-                <Text style={styles.bajada}>Beneficios de comercios de tu ciudad.</Text>
+                <Text style={styles.bajada}>
+                  Beneficios de comercios de tu ciudad.
+                </Text>
               </View>
+
               <Pressable
                 style={styles.botonGuardadas}
-                onPress={() => { if (exigirLogin()) router.push('/(tabs)/promociones/guardadas'); }}
+                onPress={() => {
+                  if (exigirLogin()) {
+                    router.push('/(tabs)/promociones/guardadas');
+                  }
+                }}
               >
                 <Text style={styles.textoGuardadas}>★ Guardadas</Text>
               </Pressable>
@@ -78,7 +151,12 @@ export default function PromocionesScreen() {
             />
 
             <Text style={styles.etiqueta}>Estado</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filaChips}>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filaChips}
+            >
               {filtros.map((item) => (
                 <ChipFiltro
                   key={item.id}
@@ -90,8 +168,18 @@ export default function PromocionesScreen() {
             </ScrollView>
 
             <Text style={styles.etiqueta}>Rubro</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filaChips}>
-              <ChipFiltro texto="Todos" seleccionado={rubroId === 'todos'} onPress={() => setRubroId('todos')} />
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filaChips}
+            >
+              <ChipFiltro
+                texto="Todos"
+                seleccionado={rubroId === 'todos'}
+                onPress={() => setRubroId('todos')}
+              />
+
               {rubros.map((rubro) => (
                 <ChipFiltro
                   key={rubro.id}
@@ -104,11 +192,22 @@ export default function PromocionesScreen() {
 
             {__DEV__ && (
               <View style={styles.panelPruebas}>
-                <Text style={styles.pruebasTitulo}>Casos exigidos por la cátedra</Text>
+                <Text style={styles.pruebasTitulo}>
+                  Simular estados de promociones
+                </Text>
+
                 <View style={styles.pruebasFila}>
-                  <Pressable onPress={() => ejecutarCaso('normal')}><Text style={styles.prueba}>Normal</Text></Pressable>
-                  <Pressable onPress={() => ejecutarCaso('vacio')}><Text style={styles.prueba}>Vacío</Text></Pressable>
-                  <Pressable onPress={() => ejecutarCaso('error')}><Text style={styles.prueba}>Error</Text></Pressable>
+                  <Pressable onPress={() => ejecutarCaso('normal')}>
+                    <Text style={styles.prueba}>Normal</Text>
+                  </Pressable>
+
+                  <Pressable onPress={() => ejecutarCaso('vacio')}>
+                    <Text style={styles.prueba}>Vacío</Text>
+                  </Pressable>
+
+                  <Pressable onPress={() => ejecutarCaso('error')}>
+                    <Text style={styles.prueba}>Error</Text>
+                  </Pressable>
                 </View>
               </View>
             )}
@@ -117,19 +216,38 @@ export default function PromocionesScreen() {
         renderItem={({ item }) => (
           <TarjetaPromocion
             promocion={item}
-            comercio={comercios.find((comercio) => comercio.id === item.comercioId)}
+            comercio={comercios.find(
+              (comercio) => comercio.id === item.comercioId
+            )}
             guardada={preferencias.promocionesGuardadas.includes(item.id)}
-            onAbrir={() => router.push({ pathname: '/(tabs)/promociones/[id]', params: { id: item.id } })}
-            onGuardar={() => { if (exigirLogin()) void alternarPromocionGuardada(item); }}
+            onAbrir={() =>
+              router.push({
+                pathname: '/(tabs)/promociones/[id]',
+                params: { id: item.id },
+              })
+            }
+            onGuardar={() => void guardarConAviso(item)}
           />
         )}
         ListEmptyComponent={
           cargando ? (
-            <EstadoPantalla cargando titulo="Buscando promociones" detalle="Consultando el servicio..." />
+            <EstadoPantalla
+              cargando
+              titulo="Buscando promociones"
+              detalle="Consultando el servicio..."
+            />
           ) : error ? (
-            <EstadoPantalla titulo="No pudimos cargar" detalle={error} textoBoton="Reintentar" onPress={() => cargar('normal')} />
+            <EstadoPantalla
+              titulo="No pudimos cargar"
+              detalle={error}
+              textoBoton="Reintentar"
+              onPress={() => void cargarRef.current('normal')}
+            />
           ) : (
-            <EstadoPantalla titulo="No hay promociones" detalle="Probá con otro estado o rubro." />
+            <EstadoPantalla
+              titulo="No hay promociones"
+              detalle="Probá con otro estado o rubro."
+            />
           )
         }
       />
@@ -140,17 +258,56 @@ export default function PromocionesScreen() {
 const styles = StyleSheet.create({
   segura: { flex: 1, backgroundColor: '#F8FAFC' },
   contenido: { padding: 18, paddingBottom: 36, flexGrow: 1 },
-  encabezado: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
+  encabezado: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
   encabezadoTexto: { flex: 1, paddingRight: 10 },
-  sobretitulo: { color: '#2B6CB0', fontSize: 12, fontWeight: '900', letterSpacing: 1.2 },
-  titulo: { color: '#0F172A', fontSize: 32, fontWeight: '900', marginTop: 2 },
+  sobretitulo: {
+    color: '#2B6CB0',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  titulo: {
+    color: '#0F172A',
+    fontSize: 32,
+    fontWeight: '900',
+    marginTop: 2,
+  },
   bajada: { color: '#64748B', fontSize: 14, marginTop: 3 },
-  botonGuardadas: { backgroundColor: '#FFF8E1', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
+  botonGuardadas: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
   textoGuardadas: { color: '#9A6700', fontWeight: '800' },
-  etiqueta: { color: '#334155', fontWeight: '800', fontSize: 14, marginBottom: 8 },
+  etiqueta: {
+    color: '#334155',
+    fontWeight: '800',
+    fontSize: 14,
+    marginBottom: 8,
+  },
   filaChips: { marginBottom: 16 },
-  panelPruebas: { backgroundColor: '#EEF2FF', borderRadius: 12, padding: 11, marginBottom: 16 },
-  pruebasTitulo: { color: '#3730A3', fontSize: 12, fontWeight: '800', marginBottom: 7 },
+  panelPruebas: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    padding: 11,
+    marginBottom: 16,
+  },
+  pruebasTitulo: {
+    color: '#3730A3',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 7,
+  },
   pruebasFila: { flexDirection: 'row', gap: 18 },
-  prueba: { color: '#4338CA', fontWeight: '700', textDecorationLine: 'underline' },
+  prueba: {
+    color: '#4338CA',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
 });

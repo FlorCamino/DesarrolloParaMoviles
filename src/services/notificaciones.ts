@@ -1,15 +1,23 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import Almacenamiento from 'expo-sqlite/kv-store';
-import { ComercioResumen, PreferenciasPromociones, Promocion } from '@/types/promociones';
+import type { PreferenciasPromociones, Promocion } from '@/types/promociones';
 
 type ModuloNotificaciones = typeof import('expo-notifications');
 type DisparadorNotificacion = import('expo-notifications').NotificationTriggerInput;
 
 const CANAL_PROMOCIONES = 'promociones';
 const PREFIJO_AVISO = 'promociones:aviso:';
-const CLAVE_CONOCIDAS = 'promociones:ids-conocidos:v1';
+const PREFIJO_CONOCIDAS = 'promociones:ids-conocidos:';
 let moduloNotificaciones: ModuloNotificaciones | null | undefined;
+
+function claveAviso(usuarioId: string, promocionId: string): string {
+  return `${PREFIJO_AVISO}${encodeURIComponent(usuarioId)}:${encodeURIComponent(promocionId)}`;
+}
+
+function claveConocidas(usuarioId: string): string {
+  return `${PREFIJO_CONOCIDAS}${encodeURIComponent(usuarioId)}`;
+}
 
 export function avisosRequierenBuildDesarrollo(): boolean {
   return Platform.OS === 'android' && Constants.expoGoConfig !== null;
@@ -34,7 +42,6 @@ async function obtenerModuloNotificaciones(): Promise<ModuloNotificaciones | nul
     console.warn('Las notificaciones no están disponibles en este entorno.', error);
     moduloNotificaciones = null;
   }
-
   return moduloNotificaciones;
 }
 
@@ -51,18 +58,33 @@ export async function prepararNotificaciones(): Promise<boolean> {
 
   const permisoActual = await Notifications.getPermissionsAsync();
   if (permisoActual.granted) return true;
-
   const permisoSolicitado = await Notifications.requestPermissionsAsync();
   return permisoSolicitado.granted;
 }
 
-export async function programarAvisoVencimiento(promocion: Promocion): Promise<void> {
+export async function cancelarAvisoVencimiento(usuarioId: string, promocionId: string): Promise<void> {
+  const clave = claveAviso(usuarioId, promocionId);
+  const identificador = await Almacenamiento.getItem(clave);
+  const Notifications = await obtenerModuloNotificaciones();
+  if (identificador && Notifications) {
+    await Notifications.cancelScheduledNotificationAsync(identificador);
+  }
+  await Almacenamiento.removeItem(clave);
+}
+
+export async function programarAvisoVencimiento(
+  usuarioId: string,
+  promocion: Promocion,
+): Promise<void> {
+  await cancelarAvisoVencimiento(usuarioId, promocion.id);
   const permitido = await prepararNotificaciones();
   if (!permitido) return;
   const Notifications = await obtenerModuloNotificaciones();
   if (!Notifications) return;
 
   const fechaVencimiento = new Date(promocion.hasta);
+  if (Number.isNaN(fechaVencimiento.getTime()) || fechaVencimiento.getTime() <= Date.now()) return;
+
   const unDiaAntes = new Date(fechaVencimiento.getTime() - 24 * 60 * 60 * 1000);
   const fechaReal = unDiaAntes.getTime() > Date.now()
     ? unDiaAntes
@@ -85,30 +107,56 @@ export async function programarAvisoVencimiento(promocion: Promocion): Promise<v
     content: {
       title: 'Tu promoción está por vencer',
       body: `${promocion.titulo} finaliza pronto.`,
-      data: { promocionId: promocion.id },
+      data: { promocionId: promocion.id, usuarioId },
     },
     trigger,
   });
-
-  await Almacenamiento.setItem(`${PREFIJO_AVISO}${promocion.id}`, identificador);
+  await Almacenamiento.setItem(claveAviso(usuarioId, promocion.id), identificador);
 }
 
-export async function cancelarAvisoVencimiento(promocionId: string): Promise<void> {
-  const clave = `${PREFIJO_AVISO}${promocionId}`;
-  const identificador = await Almacenamiento.getItem(clave);
-  const Notifications = await obtenerModuloNotificaciones();
-  if (identificador && Notifications) {
-    await Notifications.cancelScheduledNotificationAsync(identificador);
-  }
-  await Almacenamiento.removeItem(clave);
-}
+export async function sincronizarAvisosVencimiento(
+  usuarioId: string,
+  promociones: Promocion[],
+  promocionesGuardadas: string[],
+  avisosActivos: boolean,
+): Promise<void> {
+  const guardadas = new Set(promocionesGuardadas);
+  const vigentesGuardadas = avisosActivos
+    ? promociones.filter((promo) => guardadas.has(promo.id) && new Date(promo.hasta).getTime() > Date.now())
+    : [];
 
-export async function cancelarAvisosDelModulo(): Promise<void> {
   const claves = await Almacenamiento.getAllKeys();
-  const clavesDeAvisos = claves.filter((clave) => clave.startsWith(PREFIJO_AVISO));
+  const prefijoUsuario = `${PREFIJO_AVISO}${encodeURIComponent(usuarioId)}:`;
+  const clavesUsuario = claves.filter((clave) => clave.startsWith(prefijoUsuario));
+  const idsVigentes = new Set(vigentesGuardadas.map((promo) => promo.id));
+
+  for (const clave of clavesUsuario) {
+    const promocionId = decodeURIComponent(clave.slice(prefijoUsuario.length));
+    if (!idsVigentes.has(promocionId)) {
+      const identificador = await Almacenamiento.getItem(clave);
+      const Notifications = await obtenerModuloNotificaciones();
+      if (identificador && Notifications) {
+        await Notifications.cancelScheduledNotificationAsync(identificador);
+      }
+      await Almacenamiento.removeItem(clave);
+    }
+  }
+
+  if (!avisosActivos || vigentesGuardadas.length === 0) return;
+  if (!(await prepararNotificaciones())) return;
+
+  for (const promocion of vigentesGuardadas) {
+    await programarAvisoVencimiento(usuarioId, promocion);
+  }
+}
+
+export async function cancelarAvisosDelModulo(usuarioId: string): Promise<void> {
+  const claves = await Almacenamiento.getAllKeys();
+  const prefijoUsuario = `${PREFIJO_AVISO}${encodeURIComponent(usuarioId)}:`;
+  const clavesUsuario = claves.filter((clave) => clave.startsWith(prefijoUsuario));
   const Notifications = await obtenerModuloNotificaciones();
 
-  for (const clave of clavesDeAvisos) {
+  for (const clave of clavesUsuario) {
     const identificador = await Almacenamiento.getItem(clave);
     if (identificador && Notifications) {
       await Notifications.cancelScheduledNotificationAsync(identificador);
@@ -118,17 +166,24 @@ export async function cancelarAvisosDelModulo(): Promise<void> {
 }
 
 export async function avisarPromocionesNuevasRelevantes(
+  usuarioId: string,
   promociones: Promocion[],
   preferencias: PreferenciasPromociones,
-  comercios: ComercioResumen[],
+  comercios: { id: string; rubroId: string }[],
 ): Promise<void> {
-  const anterior = await Almacenamiento.getItem(CLAVE_CONOCIDAS);
+  const clave = claveConocidas(usuarioId);
+  const anterior = await Almacenamiento.getItem(clave);
   const idsActuales = promociones.map((promocion) => promocion.id);
-  await Almacenamiento.setItem(CLAVE_CONOCIDAS, JSON.stringify(idsActuales));
+  await Almacenamiento.setItem(clave, JSON.stringify(idsActuales));
 
   if (!anterior || !preferencias.avisosActivos || Platform.OS === 'web') return;
 
-  const idsConocidos = new Set<string>(JSON.parse(anterior));
+  let idsConocidos: Set<string>;
+  try {
+    idsConocidos = new Set<string>(JSON.parse(anterior));
+  } catch {
+    return;
+  }
   const nuevas = promociones.filter((promocion) => {
     if (idsConocidos.has(promocion.id)) return false;
     const comercio = comercios.find((item) => item.id === promocion.comercioId);
@@ -146,7 +201,7 @@ export async function avisarPromocionesNuevasRelevantes(
     content: {
       title: nuevas.length === 1 ? 'Nueva promoción para vos' : 'Nuevas promociones para vos',
       body: nuevas.length === 1 ? nuevas[0].titulo : `Hay ${nuevas.length} promociones según tus intereses.`,
-      data: { seccion: 'promociones' },
+      data: { seccion: 'promociones', usuarioId },
     },
     trigger: null,
   });

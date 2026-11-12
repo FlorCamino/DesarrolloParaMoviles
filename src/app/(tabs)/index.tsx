@@ -11,7 +11,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.brand}>
-          <Image source={require('@/assets/images/logo-directorio-comercios.png')} style={styles.logo} resizeMode="contain" accessible={false} />
+          <Image source={require('@/assets/images/icon.png')} style={styles.logo} resizeMode="contain" accessible={false} />
           <Text style={styles.title}>Directorio de Comercios</Text>
           <Text style={styles.city}>CONCEPCIÓN DEL URUGUAY</Text>
           <View style={styles.accents}>

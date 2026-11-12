@@ -22,7 +22,7 @@ export function ResenaTarjeta({
     onBorrar,
     onReportar,
     children
-} : Props) {
+}: Props) {
     return (
         <View style={styles.resenaItem}>
             <View style={styles.filaResena}>
@@ -35,35 +35,46 @@ export function ResenaTarjeta({
 
             {editando ? (
                 children
-            ): (
+            ) : (
                 <>
-                <Text style={styles.fecha}>{formatearFechaArgentina(resena.creadaEn)}</Text>
-                <Text style={styles.comentario}>{resena.comentario}</Text>
+                    <Text style={styles.fecha}>{formatearFechaArgentina(resena.creadaEn)}</Text>
+                    {resena.estadoSincronizacion === 'pendiente' && (
+                        <Text style={styles.pendiente}>
+                            Pendiente de sincronización
+                        </Text>
+                    )}
 
-                {resena.respuesta ? (
-                    <View style={styles.respuestaComercio}>
-                        <Text style={styles.etiquetaRespuesta}>Respuesta del comercio</Text>
-                        <Text style={styles.comentario}>{resena.respuesta}</Text>
-                    </View>
-                ) : null}
+                    {resena.estadoSincronizacion === 'error' && (
+                        <Text style={styles.errorSincronizacion}>
+                            No se pudo enviar esta reseña. Revisá los datos.
+                        </Text>
+                    )}
+                    <Text style={styles.comentario}>{resena.comentario}</Text>
 
-                {esMia ? (
-                    <View style={styles.acciones}>
-                        <Pressable accessibilityRole="button" onPress={onEditar} style={({pressed}) => [styles.accion, pressed && {opacity: 0.8}]}>
-                            <Text style={styles.accionTexto}>Editar</Text>
+                    {resena.respuesta ? (
+                        <View style={styles.respuestaComercio}>
+                            <Text style={styles.etiquetaRespuesta}>Respuesta del comercio</Text>
+                            <Text style={styles.comentario}>{resena.respuesta}</Text>
+                        </View>
+                    ) : null}
+
+                    {esMia ? (
+                        <View style={styles.acciones}>
+                            <Pressable accessibilityRole="button" onPress={onEditar} style={({ pressed }) => [styles.accion, pressed && { opacity: 0.8 }]}>
+                                <Text style={styles.accionTexto}>Editar</Text>
+                            </Pressable>
+
+                            <Pressable accessibilityRole="button" onPress={onBorrar} style={({ pressed }) => [styles.accion, pressed && { opacity: 0.8 }]}>
+                                <Text style={styles.accionTexto}>Borrar</Text>
+                            </Pressable>
+                        </View>
+                    ) : resena.reportada ? (
+                        <Text style={styles.reportada}>Reportada. Actualmente en revisión.</Text>
+                    ) : (
+                        <Pressable accessibilityRole="button" onPress={onReportar} style={({ pressed }) => [styles.reportar, pressed && { opacity: 0.8 }]}>
+                            <Text style={styles.reportarTexto}>Reportar reseña</Text>
                         </Pressable>
-
-                        <Pressable accessibilityRole="button" onPress={onBorrar} style={({pressed}) => [styles.accion, pressed && {opacity: 0.8}]}>
-                            <Text style={styles.accionTexto}>Borrar</Text>
-                        </Pressable>
-                    </View>
-                ) : resena.reportada ? (
-                    <Text style={styles.reportada}>Reportada. Actualmente en revisión.</Text>
-                ) : (
-                    <Pressable accessibilityRole="button" onPress={onReportar} style={({pressed}) => [styles.reportar, pressed && {opacity: 0.8}]}>
-                        <Text style={styles.reportarTexto}>Reportar reseña</Text>
-                    </Pressable>
-                )}
+                    )}
                 </>
             )}
         </View>
@@ -76,6 +87,16 @@ const styles = StyleSheet.create({
     nombre: { color: '#0F172A', fontSize: 14, fontWeight: '700' },
     estrellasResena: { color: '#B45309', fontSize: 15, fontWeight: '800' },
     fecha: { color: '#64748B', fontSize: 11 },
+    pendiente: {
+        color: '#B45309',
+        fontSize: 11,
+        fontWeight: '600',
+    },
+    errorSincronizacion: {
+        color: '#B91C1C',
+        fontSize: 11,
+        fontWeight: '600',
+    },
     comentario: { color: '#64748B', fontSize: 13, lineHeight: 20 },
     respuestaComercio: { backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, gap: 6 },
     etiquetaRespuesta: { color: '#1E3A8A', fontSize: 11, fontWeight: '800' },

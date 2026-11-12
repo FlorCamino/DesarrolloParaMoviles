@@ -1,3 +1,4 @@
+import { useAvisoLogin } from '@/contexts/aviso-login-context';
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -14,10 +15,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { buscarComercios } from "@/services/businesses";
+import {
+  calcularDistanciaKm,
+  formatearDistancia,
+} from "@/utils/distancias";
+
+import {
+  obtenerUbicacionReferencia,
+  type UbicacionReferencia,
+} from "@/utils/ubicacion";
+
 import { usePromociones } from "@/contexts/promociones-context";
 import { useAuth } from "@/hooks/use-auth";
+import { buscarComercios } from "@/services/businesses";
 import type { Comercio } from "@/types/business";
+import * as Network from "expo-network";
+import { obtenerFechaGuardado } from "@/services/baseDatos";
 
 type OpcionRubro = {
   id: string | null;
@@ -49,8 +62,7 @@ const NOMBRES_RUBROS: Record<string, string> = {
   "rub-otros": "Otros",
 };
 
-function estaAbiertoAhora(comercio: Comercio): boolean {
-  const ahora = new Date();
+function estaAbiertoAhora(comercio: Comercio, ahora: Date): boolean {
   const diaActual = ahora.getDay();
   const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
 
@@ -71,10 +83,13 @@ function estaAbiertoAhora(comercio: Comercio): boolean {
 
 export default function HomeScreen() {
   const { usuario } = useAuth();
+  const pedirLogin = useAvisoLogin();
   const { preferencias, alternarComercioFavorito } = usePromociones();
   const favoritos = usuario ? preferencias.comerciosFavoritos : [];
   const [soloFavoritos, setSoloFavoritos] = useState(false);
-  const [guardandoFavorito, setGuardandoFavorito] = useState<string | null>(null);
+  const [guardandoFavorito, setGuardandoFavorito] = useState<string | null>(
+    null,
+  );
   const [termino, setTermino] = useState("");
   const [rubroSeleccionado, setRubroSeleccionado] = useState<string | null>(
     null,
@@ -84,44 +99,148 @@ export default function HomeScreen() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(false);
   const [intento, setIntento] = useState(0);
+  const [ubicacion, setUbicacion] = useState<UbicacionReferencia | null>(null);
+  const [ubicacionReal, setUbicacionReal] = useState(false);
+  const [hayInternet, setHayInternet] = useState<boolean | null>(null);
+  const [fechaDatos, setFechaDatos] = useState<string | null>(null);
+  const [ahora, setAhora] = useState(() => new Date());
+
+  useEffect(() => {
+    const intervalo = setInterval(() => setAhora(new Date()), 60_000);
+
+    return () => clearInterval(intervalo);
+  }, []);
+
+  useEffect(() => {
+    async function comprobarConexion() {
+      try {
+        const estado = await Network.getNetworkStateAsync();
+
+        setHayInternet(
+          estado.isConnected === true &&
+          estado.isInternetReachable !== false,
+        );
+      } catch {
+        setHayInternet(null);
+      }
+    }
+
+    void comprobarConexion();
+
+    const suscripcion = Network.addNetworkStateListener((estado) => {
+      setHayInternet(
+        estado.isConnected === true &&
+        estado.isInternetReachable !== false,
+      );
+    });
+
+    return () => suscripcion.remove();
+  }, []);
 
   useEffect(() => {
     let vigente = true;
 
-    Promise.resolve().then(() => {
-      if (!vigente) return [];
+    async function cargarUbicacion() {
+      const resultado = await obtenerUbicacionReferencia();
+
+      if (vigente) {
+        setUbicacion(resultado.ubicacion);
+        setUbicacionReal(resultado.esReal);
+      }
+    }
+
+    void cargarUbicacion();
+
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let vigente = true;
+
+    async function cargarComercios() {
       setCargando(true);
       setError(false);
-      return buscarComercios(termino, rubroSeleccionado ?? undefined);
-    })
-      .then((resultado) => {
+
+      try {
+        const resultado = await buscarComercios(
+          termino,
+          rubroSeleccionado ?? undefined,
+        );
+
+        const fecha = await obtenerFechaGuardado();
+
         if (vigente) {
           setComercios(resultado);
+          setFechaDatos(fecha);
         }
-      })
-      .catch(() => {
+      } catch {
         if (vigente) {
           setComercios([]);
+          setFechaDatos(null);
           setError(true);
         }
-      })
-      .finally(() => {
+      } finally {
         if (vigente) {
           setCargando(false);
         }
-      });
+      }
+    }
+
+    void cargarComercios();
 
     return () => {
       vigente = false;
     };
   }, [termino, rubroSeleccionado, intento]);
 
-  const comerciosVisibles = comercios.filter((comercio) => {
-    const coincideAbiertos = !soloAbiertos || estaAbiertoAhora(comercio);
-    const coincideFavoritos = !soloFavoritos || favoritos.includes(comercio.id);
+  const datosDesactualizados =
+    fechaDatos
+      ? ahora.getTime() - new Date(fechaDatos).getTime() > 24 * 60 * 60 * 1000
+      : false;
 
-    return coincideAbiertos && coincideFavoritos;
-  });
+  function tieneCoordenadasValidas(comercio: Comercio): boolean {
+    const latitud = comercio.coordenadas?.latitud;
+    const longitud = comercio.coordenadas?.longitud;
+
+    return (
+      typeof latitud === "number" &&
+      typeof longitud === "number" &&
+      Number.isFinite(latitud) &&
+      Number.isFinite(longitud) &&
+      latitud >= -90 &&
+      latitud <= 90 &&
+      longitud >= -180 &&
+      longitud <= 180
+    );
+  }
+
+  const comerciosVisibles = [...comercios]
+    .filter((comercio) => {
+      const coincideAbiertos =
+        !soloAbiertos || estaAbiertoAhora(comercio, ahora);
+
+      const coincideFavoritos =
+        !soloFavoritos || favoritos.includes(comercio.id);
+
+      return coincideAbiertos && coincideFavoritos;
+    })
+    .sort((a, b) => {
+      if (!ubicacion) return 0;
+
+      const aValido = tieneCoordenadasValidas(a);
+      const bValido = tieneCoordenadasValidas(b);
+
+      if (aValido && !bValido) return -1;
+      if (!aValido && bValido) return 1;
+      if (!aValido && !bValido) return 0;
+
+      return (
+        calcularDistanciaKm(ubicacion, a) -
+        calcularDistanciaKm(ubicacion, b)
+      );
+    });
 
   function mostrarFicha(comercio: Comercio) {
     router.push({
@@ -136,18 +255,21 @@ export default function HomeScreen() {
     }
 
     if (!usuario) {
-      Alert.alert("Iniciá sesión", "Necesitás una cuenta para guardar comercios favoritos.", [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Ingresar", onPress: () => router.push("/login") },
-      ]);
+      pedirLogin("Necesitás una cuenta para guardar comercios favoritos.");
       return;
     }
+
     setGuardandoFavorito(comercioId);
 
     try {
       await alternarComercioFavorito(comercioId);
     } catch (error) {
       console.error("Error guardando favorito:", error);
+
+      Alert.alert(
+        "No se pudo actualizar el favorito",
+        "Revisá tu conexión e intentá nuevamente.",
+      );
     } finally {
       setGuardandoFavorito(null);
     }
@@ -202,7 +324,6 @@ export default function HomeScreen() {
 
         <Text style={styles.tituloSeccion}>Explorá por rubro</Text>
 
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -216,10 +337,7 @@ export default function HomeScreen() {
               <Pressable
                 key={rubro.nombre}
                 onPress={() => setRubroSeleccionado(rubro.id)}
-                style={[
-                  styles.chip,
-                  seleccionado && styles.chipSeleccionado,
-                ]}
+                style={[styles.chip, seleccionado && styles.chipSeleccionado]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: seleccionado }}
               >
@@ -236,7 +354,6 @@ export default function HomeScreen() {
             );
           })}
         </ScrollView>
-
 
         <View style={styles.filaResultados}>
           <View style={styles.encabezadoResultados}>
@@ -293,6 +410,55 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
+        {hayInternet === false && comercios.length > 0 && (
+          <View
+            style={{
+              backgroundColor: "#FEF3C7",
+              borderColor: "#FDE68A",
+              borderWidth: 1,
+              borderRadius: 12,
+              padding: 12,
+              marginBottom: 14,
+            }}
+          >
+            <Text
+              style={{
+                color: "#92400E",
+                fontSize: 13,
+                fontWeight: "700",
+              }}
+            >
+              Sin conexión
+            </Text>
+
+            <Text
+              style={{
+                color: "#92400E",
+                fontSize: 12,
+                marginTop: 4,
+                lineHeight: 18,
+              }}
+            >
+              {datosDesactualizados
+                ? "Los datos guardados tienen más de 24 horas y podrían estar desactualizados."
+                : "Estás viendo los comercios guardados en el dispositivo."}
+            </Text>
+
+            {fechaDatos && (
+              <Text
+                style={{
+                  color: "#92400E",
+                  fontSize: 11,
+                  marginTop: 4,
+                }}
+              >
+                Última actualización:{" "}
+                {new Date(fechaDatos).toLocaleString("es-AR")}
+              </Text>
+            )}
+          </View>
+        )}
+
         {cargando ? (
           <View style={styles.centrado}>
             <ActivityIndicator size="large" color="#1E3A8A" />
@@ -326,80 +492,118 @@ export default function HomeScreen() {
               comerciosVisibles.length === 0 && styles.listaVacia,
             ]}
             renderItem={({ item }) => {
-              const abierto = estaAbiertoAhora(item);
+              const abierto = estaAbiertoAhora(item, ahora);
               const nombreRubro = NOMBRES_RUBROS[item.rubroId] ?? "Comercio";
 
               return (
-                <Pressable
-                  onPress={() => mostrarFicha(item)}
-                  style={({ pressed }) => [
-                    styles.tarjeta,
-                    pressed && styles.tarjetaPresionada,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Ver comercio ${item.nombre}`}
-                >
+                <View style={styles.tarjeta}>
                   <View style={styles.tarjetaCabecera}>
-                    <View style={styles.iconoComercio}>
-                      <Text style={styles.iconoTexto}>▦</Text>
-                    </View>
+                    <Pressable
+                      onPress={() => mostrarFicha(item)}
+                      style={({ pressed }) => [
+                        {
+                          flex: 1,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 12,
+                        },
+                        pressed && styles.tarjetaPresionada,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Ver comercio ${item.nombre}`}
+                    >
+                      <View style={styles.iconoComercio}>
+                        <Text style={styles.iconoTexto}>▦</Text>
+                      </View>
 
-                    <View style={styles.datosComercio}>
-                      <Text style={styles.nombreComercio}>{item.nombre}</Text>
+                      <View style={styles.datosComercio}>
+                        <Text style={styles.nombreComercio}>{item.nombre}</Text>
+                        <Text style={styles.rubroComercio}>{nombreRubro}</Text>
+                      </View>
 
-                      <Text style={styles.rubroComercio}>{nombreRubro}</Text>
-                    </View>
+                      <Text style={styles.flecha}>›</Text>
+                    </Pressable>
 
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={favoritos.includes(item.id) ? 'Quitar de favoritos' : 'Guardar favorito'}
+                      accessibilityLabel={
+                        favoritos.includes(item.id)
+                          ? "Quitar de favoritos"
+                          : "Guardar favorito"
+                      }
                       disabled={guardandoFavorito !== null}
-                      onPress={(event) => { event.stopPropagation(); void cambiarFavorito(item.id); }}
-                      style={{ padding: 12 }}>
-                      <Text style={styles.favorito}>{favoritos.includes(item.id) ? '★' : '☆'}</Text>
+                      onPress={() => void cambiarFavorito(item.id)}
+                      style={{ padding: 12 }}
+                    >
+                      <Text style={styles.favorito}>
+                        {favoritos.includes(item.id) ? "★" : "☆"}
+                      </Text>
                     </Pressable>
-                    <Text style={styles.flecha}>›</Text>
                   </View>
 
-                  <Text style={styles.descripcion} numberOfLines={2}>
-                    {item.descripcion}
-                  </Text>
+                  <Pressable
+                    onPress={() => mostrarFicha(item)}
+                    style={({ pressed }) =>
+                      pressed ? styles.tarjetaPresionada : undefined
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ver detalles de ${item.nombre}`}
+                  >
+                    <Text style={styles.descripcion} numberOfLines={2}>
+                      {item.descripcion}
+                    </Text>
 
-                  <View style={styles.separador} />
+                    <View style={styles.separador} />
 
-                  <View style={styles.pieTarjeta}>
-                    <View
-                      style={[
-                        styles.estado,
-                        abierto ? styles.estadoAbierto : styles.estadoCerrado,
-                      ]}
-                    >
+                    <View style={styles.pieTarjeta}>
                       <View
                         style={[
-                          styles.puntoEstado,
-                          abierto ? styles.puntoAbierto : styles.puntoCerrado,
-                        ]}
-                      />
-
-                      <Text
-                        style={[
-                          styles.textoEstado,
-                          abierto ? styles.textoAbierto : styles.textoCerrado,
+                          styles.estado,
+                          abierto ? styles.estadoAbierto : styles.estadoCerrado,
                         ]}
                       >
-                        {abierto ? "Abierto ahora" : "Cerrado"}
+                        <View
+                          style={[
+                            styles.puntoEstado,
+                            abierto ? styles.puntoAbierto : styles.puntoCerrado,
+                          ]}
+                        />
+
+                        <Text
+                          style={[
+                            styles.textoEstado,
+                            abierto ? styles.textoAbierto : styles.textoCerrado,
+                          ]}
+                        >
+                          {abierto ? "Abierto ahora" : "Cerrado"}
+                        </Text>
+                      </View>
+
+                      <Text style={styles.puntuacion}>
+                        ★ {item.puntaje > 0 ? item.puntaje.toFixed(1) : "—"}
+                        <Text style={styles.resenas}>
+                          {" "}
+                          ({item.cantidadResenas})
+                        </Text>
+                      </Text>
+                      <Text
+                        style={{
+                          color: "#64748B",
+                          fontSize: 11,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {ubicacion
+                          ? tieneCoordenadasValidas(item)
+                            ? `${ubicacionReal ? "" : "Desde el centro · "}${formatearDistancia(
+                              calcularDistanciaKm(ubicacion, item),
+                            )}`
+                            : "Distancia no disponible"
+                          : "Calculando..."}
                       </Text>
                     </View>
-
-                    <Text style={styles.puntuacion}>
-                      ★ {item.puntaje > 0 ? item.puntaje.toFixed(1) : "—"}
-                      <Text style={styles.resenas}>
-                        {" "}
-                        ({item.cantidadResenas})
-                      </Text>
-                    </Text>
-                  </View>
-                </Pressable>
+                  </Pressable>
+                </View>
               );
             }}
             ListEmptyComponent={

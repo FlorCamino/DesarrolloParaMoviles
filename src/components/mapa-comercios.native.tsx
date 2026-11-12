@@ -1,7 +1,14 @@
-
-import { useMemo } from "react";
-import { StyleSheet, View } from "react-native";
-import WebView from "react-native-webview";
+import {
+  calcularDistanciaKm,
+  formatearDistancia,
+} from "@/utils/distancias";
+import Constants, { ExecutionEnvironment } from "expo-constants";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Platform, StyleSheet, Text, View } from "react-native";
+import MapView, {
+  Marker,
+  PROVIDER_GOOGLE,
+} from "react-native-maps";
 
 import type { Comercio } from "@/types/business";
 
@@ -19,244 +26,157 @@ type Props = {
 const REGION_INICIAL = {
   latitude: -32.4835,
   longitude: -58.2312,
+  latitudeDelta: 0.025,
+  longitudeDelta: 0.025,
 };
-
-function calcularDistanciaKm(
-  ubicacion: Ubicacion,
-  comercio: Comercio,
-): number {
-  const radioTierra = 6371;
-  const radianes = Math.PI / 180;
-
-  const lat1 = ubicacion.latitude * radianes;
-  const lat2 = comercio.coordenadas.latitud * radianes;
-  const diferenciaLatitud =
-    (comercio.coordenadas.latitud - ubicacion.latitude) * radianes;
-  const diferenciaLongitud =
-    (comercio.coordenadas.longitud - ubicacion.longitude) * radianes;
-
-  const a =
-    Math.sin(diferenciaLatitud / 2) ** 2 +
-    Math.cos(lat1) *
-      Math.cos(lat2) *
-      Math.sin(diferenciaLongitud / 2) ** 2;
-
-  const distanciaCentral =
-    2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return radioTierra * distanciaCentral;
-}
 
 export default function MapaComercios({
   comercios,
   ubicacionUsuario,
   onSeleccionar,
 }: Props) {
+  const mapaRef = useRef<MapView | null>(null);
+  const [mapaListo, setMapaListo] = useState(false);
+
   const comerciosOrdenados = useMemo(() => {
+    const comerciosValidos = comercios.filter((comercio) => {
+      const latitud = comercio.coordenadas?.latitud;
+      const longitud = comercio.coordenadas?.longitud;
+
+      return (
+        typeof latitud === "number" &&
+        typeof longitud === "number" &&
+        Number.isFinite(latitud) &&
+        Number.isFinite(longitud) &&
+        latitud >= -90 &&
+        latitud <= 90 &&
+        longitud >= -180 &&
+        longitud <= 180
+      );
+    });
+
     if (!ubicacionUsuario) {
-      return comercios;
+      return comerciosValidos;
     }
 
-    return [...comercios].sort(
+    return [...comerciosValidos].sort(
       (a, b) =>
         calcularDistanciaKm(ubicacionUsuario, a) -
         calcularDistanciaKm(ubicacionUsuario, b),
     );
   }, [comercios, ubicacionUsuario]);
 
-  const htmlMapa = useMemo(() => {
-    const datos = JSON.stringify({
-      comercios: comerciosOrdenados.map((comercio) => ({
-        id: comercio.id,
-        nombre: comercio.nombre,
-        direccion: comercio.direccion,
-        latitud: comercio.coordenadas.latitud,
-        longitud: comercio.coordenadas.longitud,
-        puntaje: comercio.puntaje,
-        distancia: ubicacionUsuario
-          ? calcularDistanciaKm(ubicacionUsuario, comercio)
-          : null,
-      })),
-      ubicacionUsuario,
-      centroInicial: REGION_INICIAL,
-    }).replace(/</g, "\\u003c");
+  const coordenadas = useMemo(() => {
+    const puntos = comerciosOrdenados.map((comercio) => ({
+      latitude: comercio.coordenadas.latitud,
+      longitude: comercio.coordenadas.longitud,
+    }));
 
-    return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    html, body, #mapa {
-      height: 100%;
-      width: 100%;
-      margin: 0;
-      padding: 0;
-      background: #EEF2F9;
+    if (ubicacionUsuario) {
+      puntos.push(ubicacionUsuario);
     }
-    .leaflet-popup-content {
-      font-family: Arial, sans-serif;
-      min-width: 150px;
-    }
-    .nombre {
-      font-size: 14px;
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-    .detalle {
-      font-size: 12px;
-      margin-bottom: 8px;
-    }
-    button {
-      border: 0;
-      border-radius: 6px;
-      background: #2455B8;
-      color: white;
-      padding: 8px 10px;
-      font-size: 12px;
-    }
-    .aviso {
-      position: absolute;
-      z-index: 1000;
-      bottom: 12px;
-      left: 12px;
-      right: 12px;
-      padding: 8px;
-      border-radius: 8px;
-      background: white;
-      font: 12px Arial, sans-serif;
-      box-shadow: 0 1px 5px #0002;
-    }
-  </style>
-</head>
-<body>
-  <div id="mapa"></div>
 
-  <script>
-    window.datosMapa = ${datos};
-  </script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    (function () {
-      const datos = window.datosMapa;
-      const centro = datos.ubicacionUsuario
-        ? [datos.ubicacionUsuario.latitude, datos.ubicacionUsuario.longitude]
-        : [datos.centroInicial.latitude, datos.centroInicial.longitude];
-
-      const mapa = L.map("mapa").setView(centro, 15);
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors",
-        maxZoom: 19
-      }).addTo(mapa);
-
-      datos.comercios.forEach(function (comercio) {
-        const distancia = comercio.distancia === null
-          ? ""
-          : "<br>" + (comercio.distancia < 1
-              ? Math.round(comercio.distancia * 1000) + " metros"
-              : comercio.distancia.toFixed(1) + " km");
-
-        const popup = document.createElement("div");
-        const nombre = document.createElement("div");
-        nombre.className = "nombre";
-        nombre.textContent = comercio.nombre;
-
-        const detalle = document.createElement("div");
-        detalle.className = "detalle";
-        detalle.textContent = comercio.direccion +
-          " · " + Number(comercio.puntaje).toFixed(1) +
-          " estrellas" +
-          (comercio.distancia === null ? "" :
-            " · " + (comercio.distancia < 1
-              ? Math.round(comercio.distancia * 1000) + " metros"
-              : comercio.distancia.toFixed(1) + " km"));
-
-        const boton = document.createElement("button");
-        boton.textContent = "Ver comercio";
-        boton.onclick = function () {
-          window.ReactNativeWebView.postMessage(
-            JSON.stringify({ tipo: "seleccionar", id: comercio.id })
-          );
-        };
-
-        popup.appendChild(nombre);
-        popup.appendChild(detalle);
-        popup.appendChild(boton);
-
-        L.marker([comercio.latitud, comercio.longitud])
-          .addTo(mapa)
-          .bindPopup(popup);
-      });
-
-      if (datos.ubicacionUsuario) {
-        L.circleMarker(
-          [datos.ubicacionUsuario.latitude, datos.ubicacionUsuario.longitude],
-          {
-            radius: 8,
-            color: "#ffffff",
-            weight: 3,
-            fillColor: "#2455B8",
-            fillOpacity: 1
-          }
-        ).addTo(mapa).bindPopup("Tu ubicación");
-
-        if (datos.comercios.length > 0) {
-          const puntos = datos.comercios.map(function (comercio) {
-            return [comercio.latitud, comercio.longitud];
-          });
-          puntos.push([
-            datos.ubicacionUsuario.latitude,
-            datos.ubicacionUsuario.longitude
-          ]);
-          mapa.fitBounds(puntos, { padding: [25, 25], maxZoom: 16 });
-        }
-      }
-
-      if (datos.comercios.length === 0) {
-        const aviso = document.createElement("div");
-        aviso.className = "aviso";
-        aviso.textContent = "No hay comercios para mostrar con este filtro.";
-        document.body.appendChild(aviso);
-      }
-    })();
-  </script>
-</body>
-</html>`;
+    return puntos;
   }, [comerciosOrdenados, ubicacionUsuario]);
 
-  function manejarMensaje(evento: { nativeEvent: { data: string } }) {
-    try {
-      const mensaje = JSON.parse(evento.nativeEvent.data);
+  useEffect(() => {
+    if (!mapaListo || coordenadas.length === 0) {
+      return;
+    }
 
-      if (mensaje.tipo !== "seleccionar") {
-        return;
-      }
-
-      const comercio = comerciosOrdenados.find(
-        (item) => item.id === mensaje.id,
+    if (coordenadas.length === 1) {
+      mapaRef.current?.animateToRegion(
+        {
+          ...coordenadas[0],
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        500,
       );
 
-      if (comercio) {
-        onSeleccionar(comercio);
-      }
-    } catch {
-      console.warn("No se pudo procesar la selección del mapa.");
+      return;
     }
+
+    mapaRef.current?.fitToCoordinates(coordenadas, {
+      edgePadding: {
+        top: 50,
+        right: 50,
+        bottom: 50,
+        left: 50,
+      },
+      animated: true,
+    });
+  }, [coordenadas, mapaListo]);
+
+  function obtenerDistancia(comercio: Comercio): string {
+    if (!ubicacionUsuario) {
+      return "";
+    }
+
+    const distancia = calcularDistanciaKm(
+      ubicacionUsuario,
+      comercio,
+    );
+
+    return formatearDistancia(distancia);
+  }
+
+  if (
+    Platform.OS === "android" &&
+    Constants.executionEnvironment !== ExecutionEnvironment.StoreClient &&
+    !Constants.expoConfig?.extra?.googleMapsAndroidConfigurado
+  ) {
+    return (
+      <View style={[styles.contenedor, styles.mapaNoDisponible]}>
+        <Text>El mapa no está disponible sin una clave de Google Maps.</Text>
+      </View>
+    );
   }
 
   return (
     <View style={styles.contenedor}>
-      <WebView
-        source={{ html: htmlMapa }}
+      <MapView
+        ref={mapaRef}
         style={styles.mapa}
-        originWhitelist={["*"]}
-        javaScriptEnabled
-        domStorageEnabled
-        onMessage={manejarMensaje}
-        setSupportMultipleWindows={false}
-      />
+        provider={PROVIDER_GOOGLE}
+        initialRegion={{
+          ...REGION_INICIAL,
+          ...(ubicacionUsuario
+            ? {
+              latitude: ubicacionUsuario.latitude,
+              longitude: ubicacionUsuario.longitude,
+            }
+            : {}),
+        }}
+        onMapReady={() => setMapaListo(true)}
+      >
+        {comerciosOrdenados.map((comercio) => (
+          <Marker
+            key={comercio.id}
+            coordinate={{
+              latitude: comercio.coordenadas.latitud,
+              longitude: comercio.coordenadas.longitud,
+            }}
+            title={comercio.nombre}
+            description={[
+              comercio.direccion,
+              `${Number(comercio.puntaje).toFixed(1)} estrellas`,
+              obtenerDistancia(comercio),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            onCalloutPress={() => onSeleccionar(comercio)}
+          />
+        ))}
+
+        {ubicacionUsuario && (
+          <Marker
+            coordinate={ubicacionUsuario}
+            title="Tu ubicación"
+            pinColor="#2455B8"
+          />
+        )}
+      </MapView>
     </View>
   );
 }
@@ -271,6 +191,10 @@ const styles = StyleSheet.create({
   },
   mapa: {
     flex: 1,
-    backgroundColor: "#E2E8F0",
+  },
+  mapaNoDisponible: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
   },
 });

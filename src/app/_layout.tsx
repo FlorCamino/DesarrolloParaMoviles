@@ -1,5 +1,7 @@
 import { BiometricReentry } from '@/components/biometric-reentry';
+import { SincronizadorResenas } from '@/components/sincronizador-resenas';
 import { AuthProvider } from '@/contexts/auth-context';
+import { AvisoLoginProvider } from '@/contexts/aviso-login-context';
 import { PromocionesProvider } from '@/contexts/promociones-context';
 import { useAuth } from '@/hooks/use-auth';
 import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
@@ -44,7 +46,9 @@ function AppWithPromociones() {
 
   return (
     <PromocionesProvider key={usuario?.id ?? 'invitado'}>
-      <AppNavigator />
+      <AvisoLoginProvider>
+        <AppNavigator />
+      </AvisoLoginProvider>
     </PromocionesProvider>
   );
 }
@@ -58,6 +62,7 @@ export default function RootLayout() {
     >
       <StatusBar style="dark" />
       <AuthProvider>
+        <SincronizadorResenas />
         <AppWithPromociones />
       </AuthProvider>
     </ThemeProvider>

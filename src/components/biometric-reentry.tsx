@@ -57,7 +57,7 @@ export function BiometricReentry() {
       <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <View style={styles.content}>
           <View style={styles.brand}>
-            <Image source={require('@/assets/images/logo-directorio-comercios.png')} style={styles.logo} resizeMode="contain" accessible={false} />
+            <Image source={require('@/assets/images/icon.png')} style={styles.logo} resizeMode="contain" accessible={false} />
             <Text style={styles.brandName}>Directorio de Comercios</Text>
             <Text style={styles.city}>CONCEPCIÓN DEL URUGUAY</Text>
             <View style={styles.accents}>
