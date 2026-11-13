@@ -42,6 +42,9 @@ Permite a los vecinos consultar información de establecimientos locales y a los
 - API REST
 - Docker
 
+## 🎥 Link al video y .apk
+[Link a Google Drive](https://drive.google.com/drive/folders/18UqV4URgbKzdd6Pc9ubVoGqoFWDv2OrS?usp=sharing)
+
 ## 🚀 Instalación y ejecución
 
 ### Requisitos previos
